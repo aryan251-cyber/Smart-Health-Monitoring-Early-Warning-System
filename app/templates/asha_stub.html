@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }} — VitalWatch ASHA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --font: 'Inter', system-ui, sans-serif;
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      --accent: #6366f1;
+      --text-primary: #f1f5f9; --text-secondary: #94a3b8;
+      --radius: 16px; --radius-sm: 10px;
+      --glass-bg: rgba(255,255,255,0.06);
+      --glass-border: rgba(255,255,255,0.12);
+      --glass-blur: blur(16px);
+      --transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); background: var(--bg-gradient); min-height: 100vh; color: var(--text-primary); display: flex; flex-direction: column; align-items: center; justify-content: center; -webkit-font-smoothing: antialiased; }
+
+    .card {
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      padding: 48px 40px;
+      max-width: 480px; width: 90%;
+      text-align: center;
+      animation: fadeIn 0.5s ease;
+    }
+    .icon-wrap {
+      width: 64px; height: 64px; border-radius: 18px;
+      background: rgba(99,102,241,0.15);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem; color: var(--accent);
+      margin: 0 auto 20px;
+    }
+    h1 { font-size: 1.5rem; font-weight: 800; margin-bottom: 8px; }
+    p  { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; margin-bottom: 28px; }
+
+    .coming-soon-badge {
+      display: inline-block;
+      background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3);
+      color: #818cf8; padding: 4px 14px; border-radius: 99px;
+      font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; margin-bottom: 24px;
+    }
+
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+      color: var(--text-secondary); padding: 10px 20px; border-radius: var(--radius-sm);
+      font-size: 0.85rem; font-weight: 600; cursor: pointer; text-decoration: none;
+      transition: var(--transition); font-family: var(--font);
+    }
+    .back-btn:hover { background: rgba(255,255,255,0.13); color: var(--text-primary); transform: translateY(-1px); }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon-wrap"><i class="fa-solid fa-clock"></i></div>
+    <div class="coming-soon-badge">Coming Soon</div>
+    <h1>{{ title }}</h1>
+    <p>This feature is currently under development.<br>It will be available in a future update.</p>
+    <a href="/asha/dashboard" class="back-btn"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</a>
+  </div>
+
+  <script>
+    const TOKEN_KEY = "vitalwatch_token";
+    const USER_KEY  = "vitalwatch_user";
+    const token = localStorage.getItem(TOKEN_KEY);
+    const user = (() => { try { return JSON.parse(localStorage.getItem(USER_KEY)); } catch { return null; }})();
+    if (!token || !user || user.role !== "ASHA_WORKER") {
+      window.location.href = "/";
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,2537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VitalWatch — Smart Health Monitoring & Early Warning System</title>
+  <meta name="description" content="AI-driven clinical health monitoring and early warning system with real-time NEWS2 vital sign risk evaluation.">
+  
+  <!-- Modern Google Fonts with Multi-script Support -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Sans+Meetei+Mayek:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Chart.js for smooth vitals trend graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Leaflet CSS for Community Risk Map (Feature #7) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+  <!-- Application Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='2') }}">
+</head>
+<body>
+
+  <!-- ==================================================== -->
+  <!-- 1. AUTHENTICATION VIEW (Register / Login)            -->
+  <!-- ==================================================== -->
+  <div id="auth-view">
+    <div class="auth-container">
+      <div class="auth-header">
+        <div style="display: inline-flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+          <div class="brand-icon">🫀</div>
+          <h2 style="font-size: 1.5rem; font-weight: 800;">VitalWatch</h2>
+        </div>
+        <p style="font-size: 0.88rem;">Smart Health Monitoring & Early Warning System</p>
+      </div>
+
+      <!-- Auth Tabs Switcher -->
+      <div class="auth-tabs">
+        <button id="tab-login-btn" class="auth-tab active" type="button">Sign In</button>
+        <button id="tab-register-btn" class="auth-tab" type="button">Register</button>
+      </div>
+
+      <div id="auth-error-msg" style="display: none;"></div>
+
+      <!-- SIGN IN FORM -->
+      <form id="form-login">
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" for="login-email">Email Address</label>
+          <input type="email" id="login-email" class="form-input" placeholder="name@example.com" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 24px;">
+          <label class="form-label" for="login-password">Password</label>
+          <input type="password" id="login-password" class="form-input" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" class="btn-primary" style="width: 100%;">Sign In</button>
+
+        <div class="auth-divider">
+          <p style="font-size: 0.78rem; margin-bottom: 8px;">Quick Demo Accounts:</p>
+          <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+            <button type="button" id="demo-patient-btn" class="preset-btn">Demo Patient</button>
+            <button type="button" id="demo-doctor-btn" class="preset-btn">Demo Doctor</button>
+            <button type="button" id="demo-asha-btn" class="preset-btn">Demo ASHA</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- REGISTER FORM -->
+      <form id="form-register" style="display: none;">
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label class="form-label" for="reg-name">Full Name</label>
+          <input type="text" id="reg-name" class="form-input" placeholder="e.g. Jenia Roy" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label class="form-label" for="reg-email">Email Address</label>
+          <input type="email" id="reg-email" class="form-input" placeholder="jenia@example.com" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label class="form-label" for="reg-password">Password (min 6 characters)</label>
+          <input type="password" id="reg-password" class="form-input" placeholder="••••••••" minlength="6" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label class="form-label" for="reg-role-select">Account Role</label>
+          <select id="reg-role-select" class="form-input" style="cursor: pointer; background: var(--bg-input); color: var(--text-primary);">
+            <option value="ASHA_WORKER" selected>ASHA Worker</option>
+            <option value="COMMUNITY_USER">Community User</option>
+            <option value="DOCTOR">Doctor</option>
+            <option value="DISTRICT_HEALTH_OFFICER">District Health Officer</option>
+            <option value="ADMIN">Admin</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-primary" style="width: 100%;">Create Account</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================================================== -->
+  <!-- 2. MAIN APP SHELL (Sidebar + Dynamic Tabs)           -->
+  <!-- ==================================================== -->
+  <div id="app-view">
+
+    <!-- Frosted-Glass Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">🫀</div>
+        <div>
+          <div class="brand-title">VitalWatch</div>
+          <span class="brand-badge">Early Warning AI</span>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <ul class="nav-menu">
+        <li>
+          <a class="nav-link active" data-tab="overview">
+            <span>🌐</span> <span data-i18n="nav_overview">Overview</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-tab="dashboard">
+            <span>📊</span> <span data-i18n="nav_dashboard">Dashboard</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-tab="vitals">
+            <span>🩺</span> <span data-i18n="nav_log_vitals">Log Vitals</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-tab="history">
+            <span>📋</span> <span data-i18n="nav_history">History</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-tab="alerts">
+            <span>🔔</span> <span data-i18n="nav_alerts">Alerts</span>
+            <span id="sidebar-alerts-badge" class="nav-badge" style="display: none;">0</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-tab="water" id="nav-water" aria-label="Water Quality Testing">
+            <span>💧</span> <span data-i18n="nav_water_quality">Water Quality</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-tab="water-sources" id="nav-water-sources" aria-label="Water Sources">
+            <span>🚰</span> <span data-i18n="nav_water_sources">Water Sources</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-tab="community" id="nav-community" aria-label="Community Reports">
+            <span>📝</span> <span data-i18n="nav_community_reports">Community Reports</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-tab="community-health" id="nav-community-health" aria-label="Community Health Surveillance">
+            <span>🛡️</span> <span data-i18n="nav_community_health">Community Health</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-tab="risk-score" id="nav-risk-score" aria-label="Disease Risk Score Calculator">
+            <span>🧮</span> <span data-i18n="nav_risk_score">Risk Score</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-tab="risk-map" id="nav-risk-map" aria-label="Community Risk Map">
+            <span>🗺️</span> <span data-i18n="nav_risk_map">Risk Map</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-tab="trends" id="nav-trends" aria-label="Health Trends">
+            <span>📈</span> <span data-i18n="nav_health_trends">Health Trends</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-tab="actions" id="nav-actions" aria-label="Recommended Actions">
+            <span>✅</span> <span data-i18n="nav_recommended_actions">Recommended Actions</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-tab="awareness" id="nav-awareness" aria-label="Health Awareness">
+            <span>💡</span> <span data-i18n="nav_awareness">Health Awareness</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-tab="cases" id="nav-cases" aria-label="Case Follow-up">
+            <span>📋</span> <span data-i18n="nav_cases">Case Follow-up</span>
+          </a>
+        </li>
+        <li>
+          <a class="nav-link" data-tab="reports" id="nav-reports" aria-label="Admin Reports">
+            <span>📊</span> <span data-i18n="nav_reports">Reports</span>
+          </a>
+        </li>
+      </ul>
+
+      <!-- User Profile Card in Sidebar -->
+      <div class="user-profile-card">
+        <div id="current-user-avatar" class="user-avatar">U</div>
+        <div class="user-info">
+          <div id="current-user-name" class="user-name">Loading...</div>
+          <div id="current-user-role" class="user-role">Patient</div>
+        </div>
+        <button class="btn-logout" title="Sign Out">⎋</button>
+      </div>
+    </aside>
+
+    <!-- Main Content Container -->
+    <main class="main-content">
+
+      <!-- Slim Top Bar (same on all pages) -->
+      <header class="slim-topbar">
+        <div class="slim-topbar-left">
+          <button id="mobile-menu-toggle" class="mobile-menu-btn" aria-label="Open Navigation">☰</button>
+          <div class="topbar-brand-inline">
+            <span class="brand-heart">🫀</span> VitalWatch
+          </div>
+          <span class="topbar-divider">/</span>
+          <span class="topbar-page-label" id="current-page-label" data-i18n="page_overview">Surveillance Overview</span>
+        </div>
+        <div class="slim-topbar-right">
+          <!-- Network Connectivity Status Pill (Feature #15) -->
+          <div class="net-status-pill online" id="net-status-pill" title="Network connectivity status" aria-live="polite">
+            <span class="net-status-dot"></span>
+            <span class="net-status-text" id="net-status-text">Online</span>
+            <span class="net-sync-spinner" id="net-sync-spinner" style="display: none;" title="Syncing pending reports..."></span>
+          </div>
+
+          <!-- Language Switcher Dropdown (Feature #11) -->
+          <div class="lang-switcher-dropdown" id="lang-switcher-container">
+            <button type="button" class="lang-switcher-btn" id="lang-switcher-btn" aria-haspopup="true" aria-expanded="false" aria-label="Select Language">
+              <span class="lang-globe-icon">🌐</span>
+              <span class="lang-current-label" id="lang-switcher-current-label">English</span>
+              <span class="lang-arrow">▾</span>
+            </button>
+            <div class="lang-dropdown-menu" id="lang-switcher-menu" role="menu">
+              <button type="button" class="lang-dropdown-option active" data-lang="en" role="menuitem">English</button>
+              <button type="button" class="lang-dropdown-option" data-lang="hi" role="menuitem">हिन्दी</button>
+              <button type="button" class="lang-dropdown-option" data-lang="as" role="menuitem">অসমীয়া</button>
+              <button type="button" class="lang-dropdown-option" data-lang="bn" role="menuitem">বাংলা</button>
+              <button type="button" class="lang-dropdown-option" data-lang="mni" role="menuitem">ꯃꯤꯇꯩꯂꯣꯟ</button>
+              <button type="button" class="lang-dropdown-option" data-lang="lus" role="menuitem">Mizo</button>
+            </div>
+          </div>
+
+          <div class="topbar-user-badge">
+            <div id="topbar-avatar" class="user-avatar-mini">U</div>
+            <span class="user-name" id="topbar-user-name">Loading...</span>
+            <span class="role-badge" id="topbar-user-role">PATIENT</span>
+          </div>
+          <button class="btn-topbar-logout" id="topbar-logout-btn" title="Sign Out">
+            <span>⎋</span> <span data-i18n="btn_logout">Logout</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Slide-down Offline Status Banner (Feature #15) -->
+      <div id="net-offline-banner" class="net-offline-banner" style="display: none;" role="status">
+        <div class="net-offline-banner-content">
+          <div class="net-banner-left">
+            <span class="net-banner-icon">📡</span>
+            <div class="net-banner-msg">
+              <strong>Offline Mode Active</strong> — Poor or no internet detected. Reports are saved securely on this device and will automatically sync when you reconnect.
+            </div>
+          </div>
+          <span class="net-banner-badge" id="net-banner-pending-badge" style="display: none;">0 Pending</span>
+        </div>
+      </div>
+
+      <!-- ==================================================== -->
+      <!-- TAB 0: OVERVIEW (Village Surveillance & Activity)    -->
+      <!-- ==================================================== -->
+      <section id="tab-view-overview" aria-labelledby="overview-page-title">
+        <div class="page-header overview-header">
+          <div>
+            <h1 class="page-title" id="overview-page-title" data-i18n="page_overview">Surveillance Overview</h1>
+            <p class="page-subtitle">Regional health indicators, high priority villages, and live surveillance activity.</p>
+          </div>
+          <div class="overview-quick-actions">
+            <button class="btn-quick-action" id="btn-quick-log-vitals" type="button">
+              <span>🩺</span> <span data-i18n="btn_log_vitals">Log Vitals</span>
+            </button>
+            <button class="btn-quick-action btn-quick-water" id="btn-quick-add-water" type="button">
+              <span>💧</span> <span data-i18n="btn_add_water_test">Add Water Test</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 5 Stat Cards (5 cols desktop -> 2 tablet -> 1 mobile) -->
+        <div class="overview-stats-grid" id="overview-stats-grid">
+          <!-- 1. Total Villages -->
+          <div class="overview-stat-card">
+            <div class="stat-card-icon icon-indigo">🗺️</div>
+            <div class="stat-card-value" id="stat-villages">--</div>
+            <div class="stat-card-label" data-i18n="stat_total_villages">Total Villages</div>
+          </div>
+
+          <!-- 2. Total ASHA Workers -->
+          <div class="overview-stat-card">
+            <div class="stat-card-icon icon-cyan">👩‍⚕️</div>
+            <div class="stat-card-value" id="stat-workers">--</div>
+            <div class="stat-card-label" data-i18n="stat_total_workers">Total ASHA Workers</div>
+          </div>
+
+          <!-- 3. Total Reports Today (Clickable -> History) -->
+          <div class="overview-stat-card stat-card-clickable" id="card-stat-reports" role="button" tabindex="0" title="Click to view vital history">
+            <div class="stat-card-icon icon-emerald">📋</div>
+            <div class="stat-card-value" id="stat-reports">--</div>
+            <div class="stat-card-label"><span data-i18n="stat_reports_today">Total Reports Today</span> <span class="card-arrow">&rarr;</span></div>
+          </div>
+
+          <!-- 4. Active Alerts (Clickable -> Alerts) -->
+          <div class="overview-stat-card stat-card-clickable" id="card-stat-alerts" role="button" tabindex="0" title="Click to view active alerts">
+            <div class="stat-card-icon icon-amber">🔔</div>
+            <div class="stat-card-value" id="stat-alerts">--</div>
+            <div class="stat-card-label"><span data-i18n="stat_active_alerts">Active Alerts</span> <span class="card-arrow">&rarr;</span></div>
+          </div>
+
+          <!-- 5. High Risk Villages (Clickable -> scrolls to High Priority Villages) -->
+          <div class="overview-stat-card stat-card-clickable" id="card-stat-highrisk" role="button" tabindex="0" title="Click to view high priority villages">
+            <div class="stat-card-icon icon-rose">⚠️</div>
+            <div class="stat-card-value" id="stat-highrisk">--</div>
+            <div class="stat-card-label"><span data-i18n="stat_high_risk_villages">High Risk Villages</span> <span class="card-arrow">&darr;</span></div>
+          </div>
+        </div>
+
+        <!-- Lower Section: High Priority Villages (Left) & Recent Activity (Right) -->
+        <div class="overview-content-grid">
+
+          <!-- High Priority Villages Card -->
+          <section class="overview-panel" id="overview-villages-card">
+            <div class="panel-header">
+              <div class="panel-title">
+                <span class="panel-icon">🛡️</span>
+                <span data-i18n="section_high_priority">High Priority Villages</span>
+              </div>
+              <span class="panel-sub">Top villages by combined clinical &amp; water risk</span>
+            </div>
+
+            <div class="table-wrap" id="overview-villages-table-wrap">
+              <table class="overview-table" aria-label="High Priority Villages">
+                <thead>
+                  <tr>
+                    <th scope="col" data-i18n="col_village">Village</th>
+                    <th scope="col" data-i18n="col_district">District</th>
+                    <th scope="col" data-i18n="col_risk_level">Risk Level</th>
+                    <th scope="col" data-i18n="col_water">Water</th>
+                  </tr>
+                </thead>
+                <tbody id="overview-villages-tbody">
+                  <!-- Dynamic rows / skeleton -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Mobile Stacked Cards -->
+            <div class="overview-village-cards-mobile" id="overview-villages-cards-mobile" style="display: none;"></div>
+          </section>
+
+          <!-- Recent Activity Card -->
+          <section class="overview-panel" id="overview-activity-card">
+            <div class="panel-header">
+              <div class="panel-title">
+                <span class="panel-icon">⏱️</span>
+                <span data-i18n="section_recent_activity">Recent Activity</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="panel-sub">Latest 5 events</span>
+                <a href="#" class="panel-view-all" id="overview-activity-view-all">View all &rarr;</a>
+              </div>
+            </div>
+
+            <div class="activity-list" id="overview-activity-list">
+              <!-- Dynamic rows / skeleton -->
+            </div>
+          </section>
+
+          <!-- Compact Top 3 Actions Card (Feature #10) -->
+          <section class="overview-panel" id="overview-actions-card">
+            <div class="panel-header">
+              <div class="panel-title">
+                <span class="panel-icon">✅</span>
+                <span data-i18n="section_top_actions">Top Recommended Actions</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="panel-sub" id="overview-actions-count">High Priority</span>
+                <a href="#actions" class="panel-view-all" id="overview-actions-view-all">View all &rarr;</a>
+              </div>
+            </div>
+
+            <div class="overview-actions-list" id="overview-top-actions-list">
+              <!-- Populated via recommended_actions.js -->
+            </div>
+          </section>
+
+        </div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- TAB 1: DASHBOARD VIEW                               -->
+      <!-- ==================================================== -->
+      <section id="tab-view-dashboard" style="display: none;">
+        <div class="page-header">
+          <h1 class="page-title" data-i18n="page_dashboard">Health Status Dashboard</h1>
+          <p class="page-subtitle">Real-time vital indicators and dual-layer AI risk surveillance.</p>
+        </div>
+
+        <!-- Dashboard Risk Overview Section (Banner + Risk Factors Strip + Environmental Cards Feature #18 & #19) -->
+        <div class="dashboard-risk-section">
+          <!-- Glassmorphic Risk Status Banner -->
+          <div id="dashboard-risk-banner" class="risk-banner status-normal">
+            <div class="risk-banner-left">
+              <div class="live-status-indicator">
+                <span id="risk-banner-icon">🫀</span>
+                <div class="live-pulse-dot"></div>
+              </div>
+              <div class="risk-banner-info">
+                <h3 id="risk-banner-title">NORMAL VITAL STABILITY</h3>
+                <p id="risk-banner-desc">All monitored vital signs are currently within standard healthy clinical ranges.</p>
+              </div>
+            </div>
+            <div class="risk-score-pill">
+              <span id="risk-banner-score" class="risk-score-number">0.0%</span>
+              <span class="risk-score-label">Community Risk</span>
+              <span class="risk-score-formula-sub" id="risk-banner-formula-sub" style="display: none;"></span>
+            </div>
+          </div>
+
+          <!-- Risk Factors Strip (Feature #19: Health + Water + Season + Weather -> Community Risk) -->
+          <div class="risk-factors-strip" id="risk-factors-strip" aria-label="Community Risk Pipeline">
+            <div class="rf-step">
+              <span class="rf-icon">🩺</span>
+              <span class="rf-label">Health</span>
+            </div>
+            <span class="rf-arrow">➔</span>
+            <div class="rf-step">
+              <span class="rf-icon">💧</span>
+              <span class="rf-label">Water</span>
+            </div>
+            <span class="rf-arrow">➔</span>
+            <div class="rf-step">
+              <span class="rf-icon" id="rf-season-icon">🍂</span>
+              <span class="rf-label" id="rf-season-label">Season (+5%)</span>
+            </div>
+            <span class="rf-arrow">➔</span>
+            <div class="rf-step">
+              <span class="rf-icon" id="rf-weather-icon">🌧️</span>
+              <span class="rf-label" id="rf-weather-label">Weather (+10%)</span>
+            </div>
+            <span class="rf-arrow rf-arrow-dest">➔</span>
+            <div class="rf-step rf-step-final">
+              <span class="rf-icon">🎯</span>
+              <span class="rf-label" id="rf-final-label">Community Risk: <strong>72%</strong></span>
+            </div>
+          </div>
+
+          <!-- Environmental Cards Row: Season + Weather side-by-side -->
+          <div class="dashboard-environmental-row">
+            <!-- Feature #18: Seasonal Risk Card -->
+            <div id="seasonal-risk-card" class="seasonal-risk-card season-theme-post-monsoon" role="region" aria-label="Seasonal Outbreak Risk">
+              <div class="seasonal-card-header">
+                <div class="seasonal-title-wrap">
+                  <div class="seasonal-icon-float" id="seasonal-icon-display" title="Current Season">🍂</div>
+                  <div class="seasonal-info-meta">
+                    <div class="seasonal-headline">
+                      <span class="seasonal-name" id="seasonal-name-display">Post-Monsoon</span>
+                      <span class="seasonal-risk-badge badge-risk-med" id="seasonal-risk-badge">Historical Risk: MEDIUM</span>
+                    </div>
+                    <div class="seasonal-factor-tag">
+                      Seasonal Factor: <span class="seasonal-adj-val" id="seasonal-adj-display">+5%</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="seasonal-preview-ctrl">
+                  <label for="seasonal-preview-select" class="seasonal-preview-label">Preview season:</label>
+                  <select id="seasonal-preview-select" class="seasonal-preview-select" aria-label="Preview season override">
+                    <option value="auto" selected>Current (Auto)</option>
+                    <option value="monsoon">Monsoon 🌧️ (+10%)</option>
+                    <option value="summer">Summer ☀️ (+5%)</option>
+                    <option value="post-monsoon">Post-Monsoon 🍂 (+5%)</option>
+                    <option value="winter">Winter ❄️ (0%)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="seasonal-card-body">
+                <div class="seasonal-calc-box">
+                  <span class="seasonal-calc-label">Season Risk Impact:</span>
+                  <span class="seasonal-formula-text" id="seasonal-formula-display">
+                    Base <strong>60%</strong> + Season <strong>+5%</strong> = <span class="seasonal-final-score">63%</span>
+                  </span>
+                </div>
+                <p class="seasonal-note">
+                  <span class="seasonal-info-bullet">ℹ️</span> Risk is adjusted using seasonal outbreak trends.
+                </p>
+              </div>
+            </div>
+
+            <!-- Feature #19: Weather Risk Card -->
+            <div id="weather-risk-card" class="weather-risk-card weather-theme-rain" role="region" aria-label="Environmental Weather Factors">
+              <div class="weather-card-header">
+                <div class="weather-title-wrap">
+                  <div class="weather-icon-float" id="weather-icon-display" title="Weather Condition">🌧️</div>
+                  <div class="weather-info-meta">
+                    <div class="weather-headline">
+                      <span class="weather-name" id="weather-preset-name">Heavy Rain</span>
+                      <span class="weather-risk-badge badge-risk-high" id="weather-risk-badge">Environmental Risk: Elevated</span>
+                    </div>
+                    <div class="weather-factor-tag">
+                      Weather Factor: <span class="weather-adj-val" id="weather-adj-display">+10%</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="weather-preview-ctrl">
+                  <label for="weather-preview-select" class="weather-preview-label">Preview weather:</label>
+                  <select id="weather-preview-select" class="weather-preview-select" aria-label="Preview weather override">
+                    <option value="heavy_rain" selected>Heavy Rain 🌧️</option>
+                    <option value="normal">Normal ⛅</option>
+                    <option value="hot_dry">Hot &amp; Dry ☀️</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="weather-card-body">
+                <!-- Weather Metrics Grid -->
+                <div class="weather-metrics-grid">
+                  <!-- Rainfall -->
+                  <div class="weather-metric-item">
+                    <div class="metric-top">
+                      <span class="metric-label">🌧️ Rainfall:</span>
+                      <span class="metric-val" id="weather-val-rainfall">High</span>
+                    </div>
+                    <div class="metric-progress-bg">
+                      <div class="metric-progress-bar bar-rainfall" id="weather-bar-rainfall" style="width: 85%;"></div>
+                    </div>
+                  </div>
+
+                  <!-- Temperature -->
+                  <div class="weather-metric-item">
+                    <div class="metric-top">
+                      <span class="metric-label">🌡️ Temperature:</span>
+                      <span class="metric-val" id="weather-val-temp">27°C</span>
+                    </div>
+                    <div class="metric-progress-bg">
+                      <div class="metric-progress-bar bar-temp" id="weather-bar-temp" style="width: 55%;"></div>
+                    </div>
+                  </div>
+
+                  <!-- Humidity -->
+                  <div class="weather-metric-item">
+                    <div class="metric-top">
+                      <span class="metric-label">💧 Humidity:</span>
+                      <span class="metric-val" id="weather-val-humidity">82%</span>
+                    </div>
+                    <div class="metric-progress-bg">
+                      <div class="metric-progress-bar bar-humidity" id="weather-bar-humidity" style="width: 82%;"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Weather Formula Impact -->
+                <div class="weather-calc-box">
+                  <span class="weather-calc-label">Weather Risk Impact:</span>
+                  <span class="weather-formula-text" id="weather-formula-display">
+                    Base <strong>60%</strong> + Season <strong>+5%</strong> + Weather <strong>+10%</strong> = <span class="weather-final-score">69%</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Latest Vitals 6-Card Grid -->
+        <div class="vitals-grid">
+          <!-- Heart Rate -->
+          <div class="vital-card">
+            <div class="vital-card-header">
+              <span class="vital-card-title">Heart Rate</span>
+              <div class="vital-card-icon" style="color: #EF4444;">❤️</div>
+            </div>
+            <div class="vital-card-value">
+              <span id="val-card-hr">--</span>
+              <span class="vital-card-unit">bpm</span>
+            </div>
+            <div class="vital-card-footer">
+              <span>Normal: 51 - 90</span>
+              <span class="vital-badge badge-normal">NEWS2</span>
+            </div>
+          </div>
+
+          <!-- SpO2 -->
+          <div class="vital-card">
+            <div class="vital-card-header">
+              <span class="vital-card-title">Oxygen Saturation</span>
+              <div class="vital-card-icon" style="color: #06B6D4;">🫁</div>
+            </div>
+            <div class="vital-card-value">
+              <span id="val-card-spo2">--</span>
+              <span class="vital-card-unit">%</span>
+            </div>
+            <div class="vital-card-footer">
+              <span>Normal: &ge; 96%</span>
+              <span class="vital-badge badge-normal">SpO2</span>
+            </div>
+          </div>
+
+          <!-- Blood Pressure -->
+          <div class="vital-card">
+            <div class="vital-card-header">
+              <span class="vital-card-title">Blood Pressure</span>
+              <div class="vital-card-icon" style="color: #F59E0B;">🩸</div>
+            </div>
+            <div class="vital-card-value">
+              <span id="val-card-bp">--</span>
+              <span class="vital-card-unit">mmHg</span>
+            </div>
+            <div class="vital-card-footer">
+              <span>Normal: 100-140/60-90</span>
+              <span class="vital-badge badge-normal">Sys/Dia</span>
+            </div>
+          </div>
+
+          <!-- Body Temperature -->
+          <div class="vital-card">
+            <div class="vital-card-header">
+              <span class="vital-card-title">Temperature</span>
+              <div class="vital-card-icon" style="color: #EC4899;">🌡️</div>
+            </div>
+            <div class="vital-card-value">
+              <span id="val-card-temp">--</span>
+              <span class="vital-card-unit">°C</span>
+            </div>
+            <div class="vital-card-footer">
+              <span>Normal: 36.1 - 37.5</span>
+              <span class="vital-badge badge-normal">Core</span>
+            </div>
+          </div>
+
+          <!-- Respiratory Rate -->
+          <div class="vital-card">
+            <div class="vital-card-header">
+              <span class="vital-card-title">Respiratory Rate</span>
+              <div class="vital-card-icon" style="color: #8B5CF6;">💨</div>
+            </div>
+            <div class="vital-card-value">
+              <span id="val-card-resp">--</span>
+              <span class="vital-card-unit">/min</span>
+            </div>
+            <div class="vital-card-footer">
+              <span>Normal: 12 - 20</span>
+              <span class="vital-badge badge-normal">Breaths</span>
+            </div>
+          </div>
+
+          <!-- Blood Glucose -->
+          <div class="vital-card">
+            <div class="vital-card-header">
+              <span class="vital-card-title">Blood Glucose</span>
+              <div class="vital-card-icon" style="color: #10B981;">🍬</div>
+            </div>
+            <div class="vital-card-value">
+              <span id="val-card-gluc">--</span>
+              <span class="vital-card-unit">mg/dL</span>
+            </div>
+            <div class="vital-card-footer">
+              <span>Normal: 70 - 140</span>
+              <span class="vital-badge badge-normal">Optional</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard Split: Trend Graph & Recent Alerts -->
+        <div class="dashboard-split">
+          <!-- Trends Graph -->
+          <div class="chart-card">
+            <div class="card-title-row">
+              <div>
+                <h3>Vitals Trend Surveillance</h3>
+                <p style="font-size: 0.8rem; color: var(--text-tertiary);">Recent readings trajectory over time</p>
+              </div>
+            </div>
+            <div class="chart-container">
+              <canvas id="vitals-trend-chart"></canvas>
+            </div>
+          </div>
+
+          <!-- Recent Alerts Preview -->
+          <div class="preview-card">
+            <div class="card-title-row">
+              <h3>Early Warnings</h3>
+              <a href="#" onclick="switchTab('alerts'); return false;" style="font-size: 0.8rem; color: var(--primary); text-decoration: none;">View All &rarr;</a>
+            </div>
+            <div id="dashboard-alerts-preview-list" class="alert-preview-list">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================== -->
+        <!-- Feature #13: Patient → Community Link              -->
+        <!-- ================================================== -->
+        <div id="pcl-wrapper" class="pcl-wrapper"></div>
+
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- TAB 2: LOG VITALS VIEW                               -->
+      <!-- ==================================================== -->
+      <section id="tab-view-vitals" style="display: none;">
+        <div class="page-header">
+          <h1 class="page-title" data-i18n="page_vitals">Log Vital Signs</h1>
+          <p class="page-subtitle">Record clinical measurements to trigger instantaneous rule engine & ML risk analysis.</p>
+        </div>
+
+        <div class="form-card">
+          <!-- Quick Preset Fill Buttons -->
+          <div class="preset-bar">
+            <span style="font-size: 0.8rem; color: var(--text-tertiary);">Quick Presets:</span>
+            <button type="button" class="preset-btn" data-preset="normal">🟢 Normal Baseline</button>
+            <button type="button" class="preset-btn" data-preset="warning">🟡 Mild Warning (HTN/Fever)</button>
+            <button type="button" class="preset-btn" data-preset="critical">🔴 Critical Alert (Hypoxia/Crisis)</button>
+          </div>
+
+          <div id="vitals-form-error" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #EF4444; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 20px;"></div>
+
+          <form id="form-log-vital">
+            <div class="form-grid">
+              <!-- Heart Rate -->
+              <div class="form-group">
+                <label class="form-label" for="input-hr">
+                  <span>Heart Rate (bpm)</span>
+                  <span class="label-hint">Normal: 51 - 90</span>
+                </label>
+                <input type="number" id="input-hr" class="form-input" placeholder="e.g. 74" min="20" max="260" step="1" required>
+              </div>
+
+              <!-- SpO2 -->
+              <div class="form-group">
+                <label class="form-label" for="input-spo2">
+                  <span>Oxygen Saturation SpO2 (%)</span>
+                  <span class="label-hint">Normal: &ge; 96%</span>
+                </label>
+                <input type="number" id="input-spo2" class="form-input" placeholder="e.g. 98" min="50" max="100" step="0.1" required>
+              </div>
+
+              <!-- Systolic BP -->
+              <div class="form-group">
+                <label class="form-label" for="input-sbp">
+                  <span>Systolic Blood Pressure (mmHg)</span>
+                  <span class="label-hint">Normal: 100 - 140</span>
+                </label>
+                <input type="number" id="input-sbp" class="form-input" placeholder="e.g. 120" min="40" max="300" step="1" required>
+              </div>
+
+              <!-- Diastolic BP -->
+              <div class="form-group">
+                <label class="form-label" for="input-dbp">
+                  <span>Diastolic Blood Pressure (mmHg)</span>
+                  <span class="label-hint">Normal: 60 - 90</span>
+                </label>
+                <input type="number" id="input-dbp" class="form-input" placeholder="e.g. 80" min="20" max="200" step="1" required>
+              </div>
+
+              <!-- Temperature -->
+              <div class="form-group">
+                <label class="form-label" for="input-temp">
+                  <span>Body Temperature (°C)</span>
+                  <span class="label-hint">Normal: 36.1 - 37.5</span>
+                </label>
+                <input type="number" id="input-temp" class="form-input" placeholder="e.g. 36.8" min="28" max="45" step="0.1" required>
+              </div>
+
+              <!-- Respiratory Rate -->
+              <div class="form-group">
+                <label class="form-label" for="input-resp">
+                  <span>Respiratory Rate (breaths/min)</span>
+                  <span class="label-hint">Normal: 12 - 20</span>
+                </label>
+                <input type="number" id="input-resp" class="form-input" placeholder="e.g. 16" min="4" max="60" step="1" required>
+              </div>
+
+              <!-- Glucose (Optional) -->
+              <div class="form-group" style="grid-column: 1 / -1;">
+                <label class="form-label" for="input-gluc">
+                  <span>Blood Glucose (mg/dL) — Optional</span>
+                  <span class="label-hint">Normal: 70 - 140</span>
+                </label>
+                <input type="number" id="input-gluc" class="form-input" placeholder="e.g. 95 (leave empty if not measured)" min="10" max="600" step="1">
+              </div>
+            </div>
+
+            <button type="submit" class="btn-primary" style="width: 100%;">
+              <span>⚡</span> <span data-i18n="btn_analyze_save">Analyze & Save Reading</span>
+            </button>
+          </form>
+
+          <!-- Immediate AI Risk Result Evaluation Card -->
+          <div id="vitals-ai-result-card" class="ai-result-card">
+            <div class="ai-result-header">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 1.1rem; font-weight: 700;">AI Risk Evaluation</span>
+                <span id="ai-result-badge" class="vital-badge badge-normal">NORMAL</span>
+              </div>
+              <span id="ai-result-score" style="font-size: 0.88rem; font-weight: 700; color: var(--primary);">Risk Score: 0.0%</span>
+            </div>
+
+            <div id="ai-result-explanation" class="ai-result-explanation">
+              Evaluating vitals...
+            </div>
+
+            <div style="margin-bottom: 8px;">
+              <span style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: var(--text-tertiary);">Itemized Clinical Findings:</span>
+            </div>
+            <ul id="ai-result-findings" class="ai-findings-list">
+              <!-- Itemized observations -->
+            </ul>
+
+            <div id="ai-result-alert-notice" style="display: none; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); color: #EF4444; padding: 12px; border-radius: 8px; font-size: 0.85rem;">
+              <!-- Alert notice -->
+            </div>
+          </div>
+
+          <!-- Feature #13: Patient → Community Link -->
+          <div id="pcl-wrapper-vitals" class="pcl-wrapper"></div>
+        </div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- TAB 3: HISTORY VIEW                                  -->
+      <!-- ==================================================== -->
+      <section id="tab-view-history" style="display: none;">
+        <div class="page-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+          <div>
+            <h1 class="page-title" data-i18n="page_history">Vitals History Log</h1>
+            <p class="page-subtitle">Chronological record of physiological telemetry and AI risk scores.</p>
+          </div>
+          <div>
+            <select id="history-filter-select" class="form-input" style="padding: 8px 14px; font-size: 0.85rem; width: auto;">
+              <option value="ALL">All Risk Levels</option>
+              <option value="NORMAL">Normal Only</option>
+              <option value="WARNING">Warning Only</option>
+              <option value="CRITICAL">Critical Only</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Heart Rate</th>
+                  <th>SpO2</th>
+                  <th>Blood Pressure</th>
+                  <th>Temperature</th>
+                  <th>Resp Rate</th>
+                  <th>Risk Status</th>
+                </tr>
+              </thead>
+              <tbody id="history-table-body">
+                <!-- Dynamically loaded -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- TAB 4: ALERTS VIEW                                   -->
+      <!-- ==================================================== -->
+      <section id="tab-view-alerts" style="display: none;">
+        <!-- Page Header with Title and Create Test Alert Button -->
+        <div class="page-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+          <div>
+            <h1 class="page-title" data-i18n="page_alerts">Early Warning Alerts</h1>
+            <p class="page-subtitle">Actionable disease surveillance alerts with risk scores, verified triggers, standard protocols, and ASHA assignments.</p>
+          </div>
+          <div>
+            <button type="button" class="preset-btn" id="btn-open-create-alert-modal" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(6, 182, 212, 0.12); border-color: rgba(6, 182, 212, 0.35); color: #38bdf8;">
+              <span>➕</span> Create Test Alert
+            </button>
+          </div>
+        </div>
+
+        <!-- Top Controls: Level Summary Chips & Active/Resolved Switch -->
+        <div class="alerts-top-controls">
+          <div class="alerts-controls-row">
+            <!-- Summary Chips with Counts (also act as filters) -->
+            <div class="early-alert-chips-bar" id="early-alert-level-chips">
+              <button type="button" class="alert-level-chip active" data-level="ALL">
+                <span>All Levels</span>
+                <span class="chip-count" id="chip-count-all">0</span>
+              </button>
+              <button type="button" class="alert-level-chip" data-level="CRITICAL">
+                <span>🔴 Critical</span>
+                <span class="chip-count" id="chip-count-critical">0</span>
+              </button>
+              <button type="button" class="alert-level-chip" data-level="ELEVATED">
+                <span>🟠 Elevated</span>
+                <span class="chip-count" id="chip-count-elevated">0</span>
+              </button>
+              <button type="button" class="alert-level-chip" data-level="WATCH">
+                <span>🟡 Watch</span>
+                <span class="chip-count" id="chip-count-watch">0</span>
+              </button>
+              <button type="button" class="alert-level-chip" data-level="NORMAL">
+                <span>🟢 Normal</span>
+                <span class="chip-count" id="chip-count-normal">0</span>
+              </button>
+            </div>
+
+            <!-- Active / Resolved Segmented Toggle -->
+            <div class="alerts-status-switch" role="tablist" aria-label="Alert status filter">
+              <button type="button" class="alert-status-btn active" id="btn-tab-status-active" data-status="active" role="tab" aria-selected="true">
+                Active (<span id="status-count-active">0</span>)
+              </button>
+              <button type="button" class="alert-status-btn" id="btn-tab-status-resolved" data-status="resolved" role="tab" aria-selected="false">
+                Resolved (<span id="status-count-resolved">0</span>)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic 2-column card grid / list -->
+        <div id="alerts-list-wrapper" class="early-alerts-grid">
+          <!-- Dynamically populated early warning alert cards -->
+        </div>
+
+        <!-- Empty State Container -->
+        <div id="alerts-empty-state" class="empty-state" style="display: none; padding: 48px 20px; text-align: center;">
+          <div class="empty-state-icon" style="font-size: 2.2rem; margin-bottom: 12px;">✅</div>
+          <h3 style="font-size: 1.15rem; color: var(--text-primary); margin-bottom: 6px;">No alerts match this filter</h3>
+          <p style="font-size: 0.88rem; color: var(--text-tertiary); max-width: 420px; margin: 0 auto;">All village surveillance parameters in this category are operating within safe baseline limits.</p>
+        </div>
+
+        <!-- Assign ASHA Worker Modal -->
+        <div id="modal-assign-asha" class="early-modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="modal-assign-title">
+          <div class="early-modal-card">
+            <div class="early-modal-header">
+              <h2 id="modal-assign-title" class="early-modal-title">Assign ASHA Worker</h2>
+              <button type="button" class="early-modal-close" id="btn-close-assign-modal" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="early-modal-body">
+              <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 8px;">
+                Select a field health worker to assign containment protocol for:
+                <strong id="modal-assign-village-name" style="color: var(--text-primary); display: block; font-size: 1rem; margin-top: 4px;">--</strong>
+              </p>
+              
+              <div class="wq-form-group" style="margin-bottom: 0;">
+                <label class="wq-label" for="select-asha-worker">ASHA Worker</label>
+                <select id="select-asha-worker" class="wq-select" style="width: 100%;">
+                  <option value="Sunita Devi (ASHA - Zone A)">Sunita Devi (ASHA - Zone A)</option>
+                  <option value="Pooja Sharma (ASHA - Zone B)">Pooja Sharma (ASHA - Zone B)</option>
+                  <option value="Anita Meena (ASHA - Zone C)">Anita Meena (ASHA - Zone C)</option>
+                  <option value="Rekha Bai (ASHA - Zone D)">Rekha Bai (ASHA - Zone D)</option>
+                  <option value="Geeta Rabari (ASHA - Zone E)">Geeta Rabari (ASHA - Zone E)</option>
+                </select>
+              </div>
+            </div>
+            <div class="early-modal-footer">
+              <button type="button" class="preset-btn" id="btn-cancel-assign">Cancel</button>
+              <button type="button" class="btn-primary" id="btn-confirm-assign" style="padding: 8px 18px; border-radius: var(--radius-sm);">Confirm Assignment</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Create Test Alert Modal (Demo Purpose) -->
+        <div id="modal-create-test-alert" class="early-modal-backdrop" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="modal-create-title">
+          <div class="early-modal-card">
+            <div class="early-modal-header">
+              <h2 id="modal-create-title" class="early-modal-title">Create Test Alert</h2>
+              <button type="button" class="early-modal-close" id="btn-close-create-alert-modal" aria-label="Close modal">&times;</button>
+            </div>
+            <div class="early-modal-body">
+              <div class="wq-form-group">
+                <label class="wq-label" for="input-test-village">Village Name</label>
+                <input type="text" id="input-test-village" class="wq-input" placeholder="e.g. Lakhipur" value="Lakhipur">
+              </div>
+              <div class="wq-form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <label class="wq-label" for="input-test-score" style="margin-bottom: 0;">Risk Score (0 - 100)</label>
+                  <span id="label-test-score-val" style="font-size: 0.82rem; font-weight: 700; color: #ef4444;">85 (CRITICAL)</span>
+                </div>
+                <input type="range" id="input-test-score" min="0" max="100" value="85" style="width: 100%; accent-color: var(--primary);">
+              </div>
+              <div class="wq-form-group" style="margin-bottom: 0;">
+                <label class="wq-label" for="input-test-reasons">Key Reasons (comma-separated)</label>
+                <textarea id="input-test-reasons" class="wq-input" rows="3" style="resize: vertical; min-height: 70px;">8 diarrhea cases reported, Water contamination detected, Cases increased by 40% this week</textarea>
+              </div>
+            </div>
+            <div class="early-modal-footer">
+              <button type="button" class="preset-btn" id="btn-cancel-create-alert">Cancel</button>
+              <button type="button" class="btn-primary" id="btn-submit-create-alert" style="padding: 8px 18px; border-radius: var(--radius-sm);">Create Alert</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating Toast Container -->
+        <div id="early-alert-toast-container" class="early-toast-container" aria-live="polite"></div>
+      </section>
+
+      <!-- ================================================== -->
+      <!-- TAB 5: WATER QUALITY                               -->
+      <!-- ================================================== -->
+      <section id="tab-view-water" style="display: none;" aria-labelledby="wq-page-title">
+        <div class="page-header">
+          <h1 class="page-title" id="wq-page-title" data-i18n="page_water_quality">💧 Water Quality Testing</h1>
+          <p class="page-subtitle">Submit a field water test and get an instant safety assessment.</p>
+        </div>
+
+        <!-- Two-column on desktop, single column on mobile -->
+        <div class="wq-layout">
+
+          <!-- ── LEFT: Entry Form ─────────────────────────── -->
+          <div class="wq-glass-card" id="wq-form-card">
+            <h2 class="wq-card-heading">🧪 Test Entry</h2>
+
+            <form id="wq-form" novalidate autocomplete="off">
+
+              <!-- Village -->
+              <div class="wq-form-group">
+                <label class="wq-label" for="wq-village">Village</label>
+                <input type="text" id="wq-village" class="wq-input" placeholder="e.g. Rampur" autocomplete="off">
+                <span class="wq-error" id="err-village" role="alert" aria-live="polite"></span>
+              </div>
+
+              <!-- Source Type -->
+              <div class="wq-form-group">
+                <label class="wq-label" for="wq-source">Source Type</label>
+                <select id="wq-source" class="wq-input wq-select">
+                  <option value="" disabled selected>Select source…</option>
+                  <option value="Hand Pump">Hand Pump</option>
+                  <option value="Well">Well</option>
+                  <option value="Tap">Tap</option>
+                  <option value="River">River</option>
+                  <option value="Pond">Pond</option>
+                </select>
+                <span class="wq-error" id="err-source" role="alert" aria-live="polite"></span>
+              </div>
+
+              <!-- pH -->
+              <div class="wq-form-group">
+                <label class="wq-label" for="wq-ph">pH <span class="wq-hint">(safe range: 6.5 – 8.5)</span></label>
+                <input type="number" id="wq-ph" class="wq-input" placeholder="e.g. 7.2" step="0.1" min="0" max="14">
+                <span class="wq-error" id="err-ph" role="alert" aria-live="polite"></span>
+              </div>
+
+              <!-- Turbidity -->
+              <div class="wq-form-group">
+                <label class="wq-label" for="wq-turbidity">Turbidity (NTU) <span class="wq-hint">(safe: ≤ 5 NTU)</span></label>
+                <input type="number" id="wq-turbidity" class="wq-input" placeholder="e.g. 3.5" step="0.1" min="0">
+                <span class="wq-error" id="err-turbidity" role="alert" aria-live="polite"></span>
+              </div>
+
+              <!-- Temperature -->
+              <div class="wq-form-group">
+                <label class="wq-label" for="wq-temp">Temperature (°C)</label>
+                <input type="number" id="wq-temp" class="wq-input" placeholder="e.g. 22" step="1" min="0" max="100">
+                <span class="wq-error" id="err-temp" role="alert" aria-live="polite"></span>
+              </div>
+
+              <!-- Bacterial Test -->
+              <div class="wq-form-group">
+                <label class="wq-label" for="wq-bacterial">Bacterial Test</label>
+                <select id="wq-bacterial" class="wq-input wq-select" required>
+                  <option value="" disabled selected>Select result…</option>
+                  <option value="negative">Negative</option>
+                  <option value="positive">Positive</option>
+                </select>
+                <span class="wq-error" id="err-bacterial" role="alert" aria-live="polite"></span>
+              </div>
+
+              <button type="submit" class="wq-btn" id="wq-submit-btn">
+                <span id="wq-btn-text" data-i18n="btn_submit_test">Submit Test</span>
+              </button>
+            </form>
+          </div>
+
+          <!-- ── RIGHT: Result Card (appears after submit) ── -->
+          <div class="wq-result-wrapper" id="wq-result-wrapper" style="display: none;" aria-live="polite">
+            <div class="wq-glass-card wq-result-card" id="wq-result-card">
+              <!-- Status Badge -->
+              <div class="wq-status-badge" id="wq-status-badge" role="status">
+                <span id="wq-status-icon" class="wq-status-icon"></span>
+                <span id="wq-status-text" class="wq-status-text"></span>
+              </div>
+
+              <!-- Risk reasons list -->
+              <ul class="wq-reasons-list" id="wq-reasons-list" aria-label="Risk factors detected">
+                <!-- populated by JS -->
+              </ul>
+
+              <!-- Safe message when no risks -->
+              <p class="wq-safe-msg" id="wq-safe-msg" style="display:none;">
+                ✅ No risk factors detected. Water is safe.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Recent Tests ─────────────────────────────── -->
+        <div class="wq-recent-section">
+          <div class="wq-recent-header">
+            <h2 class="wq-section-title" data-i18n="section_recent_tests">📋 Recent Tests</h2>
+            <span class="wq-recent-sub">Last 5 submissions (stored locally)</span>
+          </div>
+
+          <!-- Desktop table -->
+          <div class="wq-table-wrap" id="wq-table-wrap">
+            <table class="wq-table" aria-label="Recent water quality tests">
+              <thead>
+                <tr>
+                  <th scope="col">Village</th>
+                  <th scope="col">Source</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Date &amp; Time</th>
+                </tr>
+              </thead>
+              <tbody id="wq-table-body">
+                <!-- populated by JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Mobile card list -->
+          <div class="wq-recent-cards" id="wq-recent-cards" style="display:none;"></div>
+
+          <!-- Empty state -->
+          <div class="wq-empty" id="wq-empty" style="display:none;">
+            <span style="font-size:2rem;">🧊</span>
+            <p>No tests yet. Submit your first water quality test above.</p>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================================================== -->
+      <!-- TAB 6: COMMUNITY REPORTS                           -->
+      <!-- ================================================== -->
+      <section id="tab-view-community" style="display: none;" aria-labelledby="cr-page-title">
+        <div class="page-header">
+          <h1 class="page-title" id="cr-page-title" data-i18n="page_community_reports">🏘️ Community Reports</h1>
+          <p class="page-subtitle">Report waterborne illness and disease outbreaks at the community level.</p>
+        </div>
+
+        <!-- Pending Sync Card (Feature #15) -->
+        <div id="cr-pending-sync-card" class="cr-pending-sync-card" style="display: none;">
+          <div class="cr-pending-header">
+            <div class="cr-pending-title">
+              <span class="cr-pending-icon">⏳</span>
+              <div>
+                <h3 class="cr-pending-heading">Pending Sync (<span id="cr-pending-count">0</span>)</h3>
+                <span class="cr-pending-sub">Saved offline on this device · Auto-syncs when online</span>
+              </div>
+            </div>
+            <button type="button" class="cr-btn-sync-now" id="cr-btn-sync-now" title="Retry sync now">
+              <span>🔄</span> Sync Now
+            </button>
+          </div>
+          <div id="cr-pending-list" class="cr-pending-list"></div>
+        </div>
+
+        <!-- Two-column on desktop, single column on mobile -->
+        <div class="cr-layout">
+
+          <!-- LEFT: Report Form -->
+          <div class="cr-glass-card" id="cr-form-card">
+            <h2 class="cr-card-heading">📋 Report Health Issue</h2>
+            <form id="cr-form" novalidate autocomplete="off">
+
+              <!-- Village -->
+              <div class="cr-form-group">
+                <label class="cr-label" for="cr-village"><span data-i18n="label_village">Village</span> <span class="cr-required">*</span></label>
+                <input type="text" id="cr-village" class="cr-input" placeholder="e.g. Rampur" data-i18n-placeholder="placeholder_village" autocomplete="off">
+                <span class="cr-error" id="cr-err-village" role="alert" aria-live="polite"></span>
+              </div>
+
+              <!-- Symptoms (chip toggles) -->
+              <div class="cr-form-group">
+                <label class="cr-label"><span data-i18n="label_symptoms">Symptoms</span> <span class="cr-required">*</span></label>
+                <div class="cr-chip-group" id="cr-symptom-chips" role="group" aria-label="Symptom selection"></div>
+                <span class="cr-error" id="cr-err-symptoms" role="alert" aria-live="polite"></span>
+              </div>
+
+              <!-- People affected -->
+              <div class="cr-form-group">
+                <label class="cr-label" for="cr-people"><span data-i18n="label_people_affected">Number of People Affected</span> <span class="cr-required">*</span></label>
+                <input type="number" id="cr-people" class="cr-input" placeholder="e.g. 12" data-i18n-placeholder="placeholder_people" min="1" step="1">
+                <span class="cr-error" id="cr-err-people" role="alert" aria-live="polite"></span>
+              </div>
+
+              <!-- Water source (segmented radio) -->
+              <div class="cr-form-group">
+                <label class="cr-label"><span data-i18n="label_water_source">Water Source Involved</span> <span class="cr-required">*</span></label>
+                <div class="cr-radio-group" id="cr-water-radios" role="radiogroup" aria-label="Water source"></div>
+                <span class="cr-error" id="cr-err-water" role="alert" aria-live="polite"></span>
+              </div>
+
+              <button type="submit" class="cr-submit-btn" id="cr-submit-btn">
+                <span>📤</span> <span data-i18n="btn_submit_report">Submit Report</span>
+              </button>
+            </form>
+          </div>
+
+          <!-- RIGHT: Recent Reports List -->
+          <div class="cr-reports-panel">
+            <div class="cr-panel-header">
+              <h2 class="cr-card-heading" style="margin-bottom:0;" data-i18n="section_recent_reports">📊 Recent Reports</h2>
+              <span class="cr-panel-sub">Newest first · stored locally</span>
+            </div>
+
+            <!-- Summary row (shown only when reports exist) -->
+            <div class="cr-summary" id="cr-summary" style="display:none;"></div>
+
+            <!-- Report cards -->
+            <div id="cr-reports-list" class="cr-reports-list"></div>
+          </div>
+
+        </div>
+
+        <!-- ==================================================== -->
+        <!-- Feature #16: Alert Delivery & SMS Simulation         -->
+        <!-- ==================================================== -->
+        <div class="sms-delivery-section" id="sms-delivery-section">
+          <div class="sms-delivery-header">
+            <div class="sms-header-left">
+              <div class="sms-title-row">
+                <span class="sms-title-icon">🚨</span>
+                <h2 class="sms-section-title">Alert Delivery Simulation</h2>
+                <span class="sms-live-badge"><span class="sms-pulse-dot"></span> Multi-Channel</span>
+              </div>
+              <p class="sms-section-sub">
+                Simulates real-time multi-channel emergency dispatch when high waterborne disease risk is detected.
+              </p>
+            </div>
+            <div class="sms-header-actions">
+              <button type="button" class="btn-primary sms-btn-test" id="sms-btn-test-alert">
+                <span>⚡</span> Send Test Alert
+              </button>
+            </div>
+          </div>
+
+          <!-- Active Alert Trigger Banner -->
+          <div id="sms-active-banner" class="sms-active-banner" style="display: none;">
+            <div class="sms-banner-badge">
+              <span class="sms-pulse-dot-red"></span> HIGH RISK DETECTED
+            </div>
+            <div class="sms-banner-info">
+              Village: <strong id="sms-active-village">Rampur</strong> • Trigger: <span id="sms-active-trigger">Threshold exceeded</span>
+            </div>
+          </div>
+
+          <!-- Three Delivery Channel Cards (row on desktop, stacked on mobile) -->
+          <div class="sms-channels-grid">
+            <!-- Channel 1: Dashboard Alert -->
+            <div class="sms-channel-card" id="sms-channel-dashboard">
+              <div class="sms-channel-top">
+                <div class="sms-channel-icon-wrap icon-dashboard">
+                  <span>📊</span>
+                </div>
+                <span class="sms-channel-badge badge-ready" id="sms-status-dashboard">Ready</span>
+              </div>
+              <h3 class="sms-channel-title">Dashboard Alert</h3>
+              <p class="sms-channel-desc">High-priority warning banner broadcast across central clinician surveillance.</p>
+              <div class="sms-channel-footer">
+                <span class="sms-channel-meta" id="sms-meta-dashboard">Awaiting trigger</span>
+              </div>
+            </div>
+
+            <!-- Channel 2: ASHA Notification -->
+            <div class="sms-channel-card" id="sms-channel-asha">
+              <div class="sms-channel-top">
+                <div class="sms-channel-icon-wrap icon-asha">
+                  <span>🔔</span>
+                </div>
+                <span class="sms-channel-badge badge-ready" id="sms-status-asha">Ready</span>
+              </div>
+              <h3 class="sms-channel-title">ASHA Notification</h3>
+              <p class="sms-channel-desc">Direct in-app mobile push alert notifying assigned field healthcare worker.</p>
+              <div class="sms-channel-footer">
+                <span class="sms-channel-meta" id="sms-meta-asha">Awaiting trigger</span>
+              </div>
+            </div>
+
+            <!-- Channel 3: SMS Simulation -->
+            <div class="sms-channel-card" id="sms-channel-sms">
+              <div class="sms-channel-top">
+                <div class="sms-channel-icon-wrap icon-sms">
+                  <span>💬</span>
+                </div>
+                <span class="sms-channel-badge badge-ready" id="sms-status-sms">Ready</span>
+              </div>
+              <h3 class="sms-channel-title">SMS Simulation</h3>
+              <p class="sms-channel-desc">Cellular SMS dispatch to ASHA worker handset for instant offline field reach.</p>
+              <div class="sms-channel-footer">
+                <span class="sms-channel-meta" id="sms-meta-sms">Awaiting trigger</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- SMS Simulation Phone Preview Bubble -->
+          <div class="sms-preview-container" id="sms-preview-container">
+            <div class="sms-preview-header">
+              <span class="sms-preview-label">📱 SMS Dispatch Preview</span>
+              <span class="sms-preview-time" id="sms-preview-time">Ready for dispatch</span>
+            </div>
+
+            <div class="sms-phone-bubble" id="sms-phone-bubble">
+              <div class="sms-bubble-top">
+                <span class="sms-bubble-tag">SMS ALERT</span>
+                <span class="sms-bubble-to" id="sms-bubble-to">To: ASHA Worker - Rampur</span>
+              </div>
+              <p class="sms-bubble-text" id="sms-bubble-text">
+                "High waterborne disease risk detected in Rampur. Please inspect water sources and report new cases."
+              </p>
+              <div class="sms-bubble-status">
+                <span id="sms-bubble-status-text">Status: READY</span>
+                <span class="sms-bubble-timestamp" id="sms-bubble-timestamp">—</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Alert History Section -->
+          <div class="sms-history-container">
+            <div class="sms-history-header">
+              <div class="sms-history-title-group">
+                <h4 class="sms-history-title">Recent Alert History</h4>
+                <span class="sms-history-count" id="sms-history-count">(0)</span>
+              </div>
+              <button type="button" class="preset-btn sms-btn-clear" id="sms-btn-clear" title="Clear alert history">
+                Clear
+              </button>
+            </div>
+            <div class="sms-history-list" id="sms-history-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- TAB 7: COMMUNITY HEALTH (Village Risk Dashboard)     -->
+      <!-- ==================================================== -->
+      <section id="tab-view-community-health" style="display: none;" aria-labelledby="vr-page-title">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title" id="vr-page-title" data-i18n="page_community_health">Community Health Surveillance</h1>
+            <p class="page-subtitle">Village-level disease surveillance, environmental risk correlation, and outbreak early warning.</p>
+          </div>
+        </div>
+
+        <!-- 1. SUMMARY CARDS (top row, 5 cards) -->
+        <div class="vr-summary-grid" id="vr-summary-cards" role="region" aria-label="Surveillance Summary Indicators">
+          <!-- Rendered dynamically by VillageSummaryCards -->
+        </div>
+
+        <!-- 2. VILLAGE RISK TABLE CONTAINER (Glassmorphic) -->
+        <div class="vr-table-container vr-glass-card" id="vr-table-section" role="region" aria-label="Village Risk Table">
+          <div class="vr-table-header">
+            <div class="vr-table-title-group">
+              <h2 class="vr-section-title">Village Risk Surveillance</h2>
+              <span class="vr-section-subtitle">Real-time disease &amp; environmental risk categorization across villages</span>
+            </div>
+
+            <!-- Risk Filter Buttons -->
+            <div class="vr-filter-group" role="group" aria-label="Filter villages by risk level">
+              <button type="button" class="vr-filter-btn active" data-filter="All">All</button>
+              <button type="button" class="vr-filter-btn" data-filter="High">High</button>
+              <button type="button" class="vr-filter-btn" data-filter="Medium">Medium</button>
+              <button type="button" class="vr-filter-btn" data-filter="Low">Low</button>
+            </div>
+          </div>
+
+          <!-- Desktop Table Wrap -->
+          <div class="vr-table-wrap">
+            <table class="vr-table" aria-label="Village Risk Table">
+              <thead>
+                <tr>
+                  <th scope="col">Village</th>
+                  <th scope="col">Cases</th>
+                  <th scope="col">Water Risk</th>
+                  <th scope="col">Disease Risk</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody id="vr-table-tbody">
+                <!-- Rendered dynamically by VillageRiskTable -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Mobile Stacked Cards (Responsive for small screens) -->
+          <div class="vr-mobile-cards" id="vr-mobile-cards" style="display: none;" aria-label="Village Risk Cards for Mobile">
+            <!-- Rendered dynamically by VillageRiskTable -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- TAB 8: DISEASE RISK SCORE CALCULATOR                 -->
+      <!-- ==================================================== -->
+      <section id="tab-view-risk-score" style="display: none;" aria-labelledby="drs-page-title">
+        <div class="page-header">
+          <div>
+            <h1 class="page-title" id="drs-page-title" data-i18n="page_risk_score">Disease Risk Score</h1>
+            <p class="page-subtitle">Calculate a village's outbreak risk using symptoms, water quality, recent cases, and season.</p>
+          </div>
+        </div>
+
+        <!-- Two-column layout: Form (left) + Result (right) -->
+        <div class="drs-layout">
+
+          <!-- LEFT: Input Form -->
+          <div class="drs-form-card drs-glass-card" id="drs-form-card">
+            <h2 class="drs-card-heading">🧮 Risk Inputs</h2>
+
+            <!-- Inline alert box -->
+            <div id="drs-form-alert" class="drs-alert" style="display:none;" role="alert" aria-live="polite"></div>
+
+            <form id="drs-form" novalidate autocomplete="off">
+
+              <!-- Village Select -->
+              <div class="drs-form-group">
+                <label class="drs-label" for="drs-village-select">Village</label>
+                <select id="drs-village-select" class="drs-select">
+                  <option value="custom">— Enter manually —</option>
+                  <option value="Modhera">Modhera</option>
+                  <option value="Dhordo">Dhordo</option>
+                  <option value="Poshina">Poshina</option>
+                  <option value="Hodka">Hodka</option>
+                  <option value="Bhujodi">Bhujodi</option>
+                  <option value="Nirona">Nirona</option>
+                  <option value="Madhapur">Madhapur</option>
+                </select>
+                <span class="drs-hint">Selecting a village prefills fields from Village Risk data.</span>
+              </div>
+
+              <!-- Symptoms Count -->
+              <div class="drs-form-group">
+                <label class="drs-label" for="drs-symptoms">Reported Symptoms Count</label>
+                <input type="number" id="drs-symptoms" class="drs-input" placeholder="e.g. 4" min="0" step="1" required>
+                <span class="drs-hint">Number of distinct symptoms reported in the village.</span>
+              </div>
+
+              <!-- Water Quality -->
+              <div class="drs-form-group">
+                <label class="drs-label" for="drs-water">Water Quality</label>
+                <select id="drs-water" class="drs-select" required>
+                  <option value="" disabled selected>Select quality…</option>
+                  <option value="good">Good — Clean / Treated</option>
+                  <option value="moderate">Moderate — Partially Contaminated</option>
+                  <option value="bad">Bad — Contaminated / Unsafe</option>
+                </select>
+              </div>
+
+              <!-- Recent Cases -->
+              <div class="drs-form-group">
+                <label class="drs-label" for="drs-cases">Recent Cases (past 30 days)</label>
+                <input type="number" id="drs-cases" class="drs-input" placeholder="e.g. 12" min="0" step="1" required>
+              </div>
+
+              <!-- Season -->
+              <div class="drs-form-group">
+                <label class="drs-label" for="drs-season">Current Season</label>
+                <select id="drs-season" class="drs-select" required>
+                  <option value="" disabled selected>Select season…</option>
+                  <option value="monsoon">Monsoon (High outbreak risk)</option>
+                  <option value="summer">Summer</option>
+                  <option value="winter">Winter</option>
+                </select>
+              </div>
+
+              <button type="submit" class="drs-submit-btn" id="drs-calc-btn">
+                <span id="drs-btn-text">Calculate Risk</span>
+              </button>
+            </form>
+          </div>
+
+          <!-- RIGHT: Result Card -->
+          <div class="drs-result-card drs-glass-card" id="drs-result-card">
+
+            <!-- Initial / empty state -->
+            <div id="drs-result-initial" class="drs-result-initial">
+              <span class="drs-result-icon">📊</span>
+              <p>Fill in the form and click <strong>Calculate Risk</strong> to see the assessment.</p>
+            </div>
+
+            <!-- Result content (hidden until calculated) -->
+            <div id="drs-result-content" style="display:none;">
+
+              <!-- Village title -->
+              <h2 class="drs-result-title" id="drs-result-village-name">Risk Assessment</h2>
+
+              <!-- Circular Gauge -->
+              <div class="drs-gauge-wrapper" aria-label="Risk score gauge">
+                <svg class="drs-gauge-svg" viewBox="0 0 120 120">
+                  <!-- Track circle -->
+                  <circle class="drs-gauge-track" cx="60" cy="60" r="50"
+                    fill="none" stroke-width="10"
+                    stroke-dasharray="314.159" stroke-dashoffset="0"/>
+                  <!-- Animated fill circle -->
+                  <circle id="drs-gauge-circle" class="drs-gauge-fill" cx="60" cy="60" r="50"
+                    fill="none" stroke-width="10"
+                    stroke-linecap="round"
+                    stroke-dasharray="314.159" stroke-dashoffset="314.159"
+                    transform="rotate(-90 60 60)"/>
+                </svg>
+                <div class="drs-gauge-center">
+                  <span id="drs-gauge-num" class="drs-gauge-num">0</span>
+                  <span class="drs-gauge-label">/100</span>
+                </div>
+              </div>
+
+              <!-- Status Badge -->
+              <div class="drs-badge-wrapper">
+                <span id="drs-result-badge" class="drs-badge">--</span>
+              </div>
+
+              <!-- Advice text -->
+              <p id="drs-advice-text" class="drs-advice-text"></p>
+
+              <!-- 4-bar Breakdown -->
+              <div class="drs-breakdown">
+                <h3 class="drs-breakdown-title">Score Breakdown</h3>
+
+                <div class="drs-breakdown-row">
+                  <div class="drs-breakdown-meta">
+                    <span class="drs-breakdown-label">Symptoms</span>
+                    <span class="drs-breakdown-val" id="drs-val-symptoms">0 / 40</span>
+                  </div>
+                  <div class="drs-bar-track"><div class="drs-bar-fill drs-bar-symptoms" id="drs-bar-symptoms"></div></div>
+                </div>
+
+                <div class="drs-breakdown-row">
+                  <div class="drs-breakdown-meta">
+                    <span class="drs-breakdown-label">Water Quality</span>
+                    <span class="drs-breakdown-val" id="drs-val-water">0 / 30</span>
+                  </div>
+                  <div class="drs-bar-track"><div class="drs-bar-fill drs-bar-water" id="drs-bar-water"></div></div>
+                </div>
+
+                <div class="drs-breakdown-row">
+                  <div class="drs-breakdown-meta">
+                    <span class="drs-breakdown-label">Recent Cases</span>
+                    <span class="drs-breakdown-val" id="drs-val-cases">0 / 20</span>
+                  </div>
+                  <div class="drs-bar-track"><div class="drs-bar-fill drs-bar-cases" id="drs-bar-cases"></div></div>
+                </div>
+
+                <div class="drs-breakdown-row">
+                  <div class="drs-breakdown-meta">
+                    <span class="drs-breakdown-label">Season</span>
+                    <span class="drs-breakdown-val" id="drs-val-season">0 / 10</span>
+                  </div>
+                  <div class="drs-bar-track"><div class="drs-bar-fill drs-bar-season" id="drs-bar-season"></div></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- TAB 8: COMMUNITY RISK MAP (FEATURE #7)               -->
+      <!-- ==================================================== -->
+      <section id="tab-view-risk-map" style="display: none;" aria-labelledby="crm-page-title">
+        <div class="page-header" style="display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+          <div>
+            <h1 class="page-title" id="crm-page-title" data-i18n="page_risk_map">🗺️ Community Risk Map</h1>
+            <p class="page-subtitle">Interactive geospatial disease surveillance with village epidemiological risk markers.</p>
+            <div id="crm-summary-line" class="crm-summary-line">
+              <span class="crm-summary-badge" id="crm-summary-villages">8 villages monitored</span>
+              <span class="crm-summary-divider">•</span>
+              <span class="crm-summary-alert" id="crm-summary-highrisk">3 high risk</span>
+            </div>
+          </div>
+
+          <!-- Controls: Filter Chips & Reset View -->
+          <div class="crm-header-controls">
+            <div class="crm-filter-chips" role="group" aria-label="Filter villages by risk level">
+              <button type="button" class="crm-chip active" data-filter="ALL">All (<span id="crm-count-all">0</span>)</button>
+              <button type="button" class="crm-chip chip-high" data-filter="High">🔴 High (<span id="crm-count-high">0</span>)</button>
+              <button type="button" class="crm-chip chip-medium" data-filter="Medium">🟡 Medium (<span id="crm-count-medium">0</span>)</button>
+              <button type="button" class="crm-chip chip-low" data-filter="Low">🟢 Low (<span id="crm-count-low">0</span>)</button>
+            </div>
+            <button type="button" class="preset-btn" id="crm-btn-reset-view" title="Reset map zoom & center" style="display: inline-flex; align-items: center; gap: 6px;">
+              <span>🎯</span> Reset View
+            </button>
+          </div>
+        </div>
+
+        <!-- Hint line above map -->
+        <p class="crm-map-hint" id="crm-map-hint">📍 Tap a marker to view village details</p>
+
+        <!-- Map & Detail Panel Master Layout -->
+        <div class="crm-container">
+          <!-- Leaflet Map Viewport -->
+          <div id="community-risk-map" class="crm-map-viewport"></div>
+
+          <!-- Map Glass Legend (bottom-left) -->
+          <div class="crm-legend-box" aria-label="Risk Map Legend">
+            <div class="crm-legend-title">Risk Level</div>
+            <div class="crm-legend-item">
+              <span class="crm-legend-dot crm-dot-high"></span>
+              <span>High (70 - 100)</span>
+            </div>
+            <div class="crm-legend-item">
+              <span class="crm-legend-dot crm-dot-medium"></span>
+              <span>Medium (40 - 69)</span>
+            </div>
+            <div class="crm-legend-item">
+              <span class="crm-legend-dot crm-dot-low"></span>
+              <span>Low (0 - 39)</span>
+            </div>
+          </div>
+
+          <!-- Glass Detail Panel (Desktop: slide-in top-right / Mobile: bottom sheet) -->
+          <div id="crm-detail-panel" class="crm-detail-panel" aria-live="polite" aria-hidden="true">
+            <!-- Mobile drag handle -->
+            <div class="crm-sheet-handle" aria-hidden="true"></div>
+
+            <div id="crm-panel-content">
+              <div class="crm-panel-header">
+                <div>
+                  <h3 id="crm-village-name" class="crm-village-name">Village Name</h3>
+                  <span id="crm-village-badge" class="crm-risk-badge">HIGH RISK</span>
+                </div>
+                <button type="button" id="crm-panel-close" class="crm-panel-close-btn" aria-label="Close detail panel">&times;</button>
+              </div>
+
+              <!-- Metrics Grid -->
+              <div class="crm-metrics-grid">
+                <div class="crm-metric-card">
+                  <div class="crm-metric-icon">👥</div>
+                  <div class="crm-metric-info">
+                    <span class="crm-metric-label">Population</span>
+                    <span id="crm-val-population" class="crm-metric-val">--</span>
+                  </div>
+                </div>
+
+                <div class="crm-metric-card">
+                  <div class="crm-metric-icon">🤒</div>
+                  <div class="crm-metric-info">
+                    <span class="crm-metric-label">Active Cases</span>
+                    <span id="crm-val-cases" class="crm-metric-val">--</span>
+                  </div>
+                </div>
+
+                <div class="crm-metric-card">
+                  <div class="crm-metric-icon">💧</div>
+                  <div class="crm-metric-info">
+                    <span class="crm-metric-label">Water Sources</span>
+                    <span id="crm-val-water" class="crm-metric-val">--</span>
+                  </div>
+                </div>
+
+                <div class="crm-metric-card">
+                  <div class="crm-metric-icon">⚠️</div>
+                  <div class="crm-metric-info">
+                    <span class="crm-metric-label">Contaminated</span>
+                    <span id="crm-val-contaminated" class="crm-metric-val">--</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Disease Risk Progress Bar -->
+              <div class="crm-risk-bar-container">
+                <div class="crm-risk-bar-meta">
+                  <span class="crm-risk-bar-label">Disease Risk Score</span>
+                  <span id="crm-val-risk-score" class="crm-risk-bar-pct">0%</span>
+                </div>
+                <div class="crm-risk-bar-track">
+                  <div id="crm-risk-bar-fill" class="crm-risk-bar-fill" style="width: 0%;"></div>
+                </div>
+              </div>
+
+              <!-- Action Button -->
+              <div class="crm-panel-actions">
+                <button type="button" id="crm-btn-view-details" class="btn-primary" style="width: 100%; justify-content: center; padding: 10px 16px; border-radius: var(--radius-sm); font-size: 0.86rem;">
+                  <span>📋</span> View Village Details &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- TAB 10: HEALTH TRENDS (Feature #8: Community Graphs) -->
+      <!-- ==================================================== -->
+      <section id="tab-view-trends" class="trends-view-section" aria-labelledby="trends-page-title" style="display: none;">
+        <div class="page-header trends-header">
+          <div>
+            <h1 class="page-title" id="trends-page-title" data-i18n="page_health_trends">Community Health Trends</h1>
+            <p class="page-subtitle">Real-time epidemiological trend monitoring across community health metrics over recent days.</p>
+          </div>
+        </div>
+
+        <div class="trends-grid">
+          <!-- 1. Diarrhea cases -->
+          <div class="trend-card" id="card-trend-diarrhea">
+            <div class="trend-card-header">
+              <div class="trend-card-meta">
+                <span class="trend-card-icon" style="background: rgba(244, 63, 94, 0.15); color: #F43F5E;">🩺</span>
+                <div>
+                  <h3 class="trend-card-title">Diarrhea Cases</h3>
+                  <span class="trend-card-sub">Daily reported cases</span>
+                </div>
+              </div>
+              <div class="trend-badge" id="trend-badge-diarrhea" title="Latest metric vs. previous day">--</div>
+            </div>
+            <div class="trend-chart-wrapper">
+              <div class="trend-loading-state" id="trend-loading-diarrhea">
+                <div class="trend-spinner"></div>
+                <span>Loading trend...</span>
+              </div>
+              <div class="trend-error-state" id="trend-error-diarrhea" style="display: none;">
+                <span>⚠️ Unable to load trend data</span>
+              </div>
+              <canvas id="trend-chart-diarrhea"></canvas>
+            </div>
+          </div>
+
+          <!-- 2. Fever cases -->
+          <div class="trend-card" id="card-trend-fever">
+            <div class="trend-card-header">
+              <div class="trend-card-meta">
+                <span class="trend-card-icon" style="background: rgba(245, 158, 11, 0.15); color: #F59E0B;">🌡️</span>
+                <div>
+                  <h3 class="trend-card-title">Fever Cases</h3>
+                  <span class="trend-card-sub">Community fever surveillance</span>
+                </div>
+              </div>
+              <div class="trend-badge" id="trend-badge-fever" title="Latest metric vs. previous day">--</div>
+            </div>
+            <div class="trend-chart-wrapper">
+              <div class="trend-loading-state" id="trend-loading-fever">
+                <div class="trend-spinner"></div>
+                <span>Loading trend...</span>
+              </div>
+              <div class="trend-error-state" id="trend-error-fever" style="display: none;">
+                <span>⚠️ Unable to load trend data</span>
+              </div>
+              <canvas id="trend-chart-fever"></canvas>
+            </div>
+          </div>
+
+          <!-- 3. Water contamination -->
+          <div class="trend-card" id="card-trend-water-contamination">
+            <div class="trend-card-header">
+              <div class="trend-card-meta">
+                <span class="trend-card-icon" style="background: rgba(6, 182, 212, 0.15); color: #06B6D4;">💧</span>
+                <div>
+                  <h3 class="trend-card-title">Water Contamination</h3>
+                  <span class="trend-card-sub">Contamination incidents</span>
+                </div>
+              </div>
+              <div class="trend-badge" id="trend-badge-water-contamination" title="Latest metric vs. previous day">--</div>
+            </div>
+            <div class="trend-chart-wrapper">
+              <div class="trend-loading-state" id="trend-loading-water-contamination">
+                <div class="trend-spinner"></div>
+                <span>Loading trend...</span>
+              </div>
+              <div class="trend-error-state" id="trend-error-water-contamination" style="display: none;">
+                <span>⚠️ Unable to load trend data</span>
+              </div>
+              <canvas id="trend-chart-water-contamination"></canvas>
+            </div>
+          </div>
+
+          <!-- 4. High-risk villages -->
+          <div class="trend-card" id="card-trend-high-risk-villages">
+            <div class="trend-card-header">
+              <div class="trend-card-meta">
+                <span class="trend-card-icon" style="background: rgba(239, 68, 68, 0.15); color: #EF4444;">⚠️</span>
+                <div>
+                  <h3 class="trend-card-title">High-Risk Villages</h3>
+                  <span class="trend-card-sub">Villages on alert status</span>
+                </div>
+              </div>
+              <div class="trend-badge" id="trend-badge-high-risk-villages" title="Latest metric vs. previous day">--</div>
+            </div>
+            <div class="trend-chart-wrapper">
+              <div class="trend-loading-state" id="trend-loading-high-risk-villages">
+                <div class="trend-spinner"></div>
+                <span>Loading trend...</span>
+              </div>
+              <div class="trend-error-state" id="trend-error-high-risk-villages" style="display: none;">
+                <span>⚠️ Unable to load trend data</span>
+              </div>
+              <canvas id="trend-chart-high-risk-villages"></canvas>
+            </div>
+          </div>
+
+          <!-- 5. Temperature -->
+          <div class="trend-card" id="card-trend-temperature">
+            <div class="trend-card-header">
+              <div class="trend-card-meta">
+                <span class="trend-card-icon" style="background: rgba(236, 72, 153, 0.15); color: #EC4899;">📈</span>
+                <div>
+                  <h3 class="trend-card-title">Elevated Temperature</h3>
+                  <span class="trend-card-sub">Vitals with fever &ge; 37.8&deg;C</span>
+                </div>
+              </div>
+              <div class="trend-badge" id="trend-badge-temperature" title="Latest metric vs. previous day">--</div>
+            </div>
+            <div class="trend-chart-wrapper">
+              <div class="trend-loading-state" id="trend-loading-temperature">
+                <div class="trend-spinner"></div>
+                <span>Loading trend...</span>
+              </div>
+              <div class="trend-error-state" id="trend-error-temperature" style="display: none;">
+                <span>⚠️ Unable to load trend data</span>
+              </div>
+              <canvas id="trend-chart-temperature"></canvas>
+            </div>
+          </div>
+
+          <!-- 6. Respiratory symptoms -->
+          <div class="trend-card" id="card-trend-respiratory">
+            <div class="trend-card-header">
+              <div class="trend-card-meta">
+                <span class="trend-card-icon" style="background: rgba(139, 92, 246, 0.15); color: #8B5CF6;">🫁</span>
+                <div>
+                  <h3 class="trend-card-title">Respiratory Symptoms</h3>
+                  <span class="trend-card-sub">Cough &amp; respiratory reports</span>
+                </div>
+              </div>
+              <div class="trend-badge" id="trend-badge-respiratory" title="Latest metric vs. previous day">--</div>
+            </div>
+            <div class="trend-chart-wrapper">
+              <div class="trend-loading-state" id="trend-loading-respiratory">
+                <div class="trend-spinner"></div>
+                <span>Loading trend...</span>
+              </div>
+              <div class="trend-error-state" id="trend-error-respiratory" style="display: none;">
+                <span>⚠️ Unable to load trend data</span>
+              </div>
+              <canvas id="trend-chart-respiratory"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- TAB 11: WATER SOURCES (Feature #9: Water Sources Mgmt) -->
+      <!-- ==================================================== -->
+      <section id="tab-view-water-sources" class="ws-view-section" aria-labelledby="ws-page-title" style="display: none;">
+        <!-- Header: Title + "Add Source" Button -->
+        <div class="page-header ws-page-header">
+          <div>
+            <h1 class="page-title" id="ws-page-title" data-i18n="page_water_sources">Water Sources</h1>
+            <p class="page-subtitle">Community water source monitoring, manual quality logging, and automated safety evaluation.</p>
+          </div>
+          <div>
+            <button type="button" class="btn-primary" id="ws-btn-add-source">
+              <span>+</span> <span data-i18n="btn_add_source">Add Source</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Summary Row: 3 Count Chips acting as Filter Toggles -->
+        <div class="ws-filter-row" role="region" aria-label="Water source status filters">
+          <button type="button" class="ws-filter-chip ws-chip-safe" data-status="safe" id="ws-filter-safe" title="Filter by safe sources">
+            <span class="ws-chip-dot"></span>
+            <span class="ws-chip-label" data-i18n="status_safe">Safe</span>
+            <span class="ws-chip-count" id="ws-count-safe">0</span>
+          </button>
+          <button type="button" class="ws-filter-chip ws-chip-warning" data-status="warning" id="ws-filter-warning" title="Filter by warning sources">
+            <span class="ws-chip-dot"></span>
+            <span class="ws-chip-label" data-i18n="status_warning">Warning</span>
+            <span class="ws-chip-count" id="ws-count-warning">0</span>
+          </button>
+          <button type="button" class="ws-filter-chip ws-chip-contaminated" data-status="contaminated" id="ws-filter-contaminated" title="Filter by contaminated sources">
+            <span class="ws-chip-dot pulse-dot"></span>
+            <span class="ws-chip-label" data-i18n="status_contaminated">Contaminated</span>
+            <span class="ws-chip-count" id="ws-count-contaminated">0</span>
+          </button>
+          <span class="ws-filter-hint" id="ws-filter-hint" style="display: none;">Click active filter to clear</span>
+        </div>
+
+        <!-- Loading State -->
+        <div id="ws-loading-state" class="ws-state-box" style="display: none;">
+          <div class="trend-spinner"></div>
+          <span data-i18n="msg_loading">Loading water sources...</span>
+        </div>
+
+        <!-- Friendly Error State -->
+        <div id="ws-error-state" class="ws-state-box ws-error-box" style="display: none;">
+          <span>⚠️ Unable to load water sources. Please check network connection and try again.</span>
+          <button type="button" class="btn-primary" id="ws-btn-retry" style="margin-top: 10px; padding: 6px 14px; font-size: 0.82rem;" data-i18n="btn_retry">Retry</button>
+        </div>
+
+        <!-- Friendly Empty State -->
+        <div id="ws-empty-state" class="ws-state-box ws-empty-box" style="display: none;">
+          <div style="font-size: 2.2rem; margin-bottom: 8px;">🚰</div>
+          <h3 style="font-size: 1.05rem; font-weight: 700;" data-i18n="msg_no_sources">No Water Sources Found</h3>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">No sources match the selected criteria. Click "Add Source" to register one.</p>
+        </div>
+
+        <!-- 3. Responsive Grid of Source Cards (3 desktop / 2 tablet / 1 mobile) -->
+        <div class="ws-grid" id="ws-grid"></div>
+      </section>
+
+      <!-- Glassmorphic Modal: Add / Edit Water Source -->
+      <div id="ws-modal-backdrop" class="ws-modal-backdrop" style="display: none;">
+        <div class="ws-modal" role="dialog" aria-modal="true" aria-labelledby="ws-modal-title">
+          <div class="ws-modal-header">
+            <div>
+              <h2 id="ws-modal-title" class="ws-modal-title" data-i18n="btn_add_source">Add Water Source</h2>
+              <p class="ws-modal-sub" id="ws-modal-sub">Enter source parameters for automatic risk assessment</p>
+            </div>
+            <button type="button" class="ws-modal-close" id="ws-modal-close-btn" aria-label="Close modal">&times;</button>
+          </div>
+
+          <form id="ws-form">
+            <input type="hidden" id="ws-form-id" value="">
+
+            <div class="form-group" style="margin-bottom: 14px;">
+              <label class="form-label" for="ws-input-name"><span data-i18n="label_source_name">Source Name</span> *</label>
+              <input type="text" id="ws-input-name" class="form-input" placeholder="e.g. Community Well - North Sector" data-i18n-placeholder="placeholder_source_name" required>
+            </div>
+
+            <div class="ws-form-row">
+              <div class="form-group" style="flex: 1; margin-bottom: 14px;">
+                <label class="form-label" for="ws-input-type"><span data-i18n="label_source_type">Source Type</span> *</label>
+                <select id="ws-input-type" class="form-input" style="background: var(--bg-input); color: var(--text-primary); cursor: pointer;" required>
+                  <option value="hand_pump">🚰 Hand Pump</option>
+                  <option value="well">🕳️ Well</option>
+                  <option value="river">🌊 River</option>
+                  <option value="tap">🚿 Tap</option>
+                  <option value="other">💧 Other</option>
+                </select>
+              </div>
+
+              <div class="form-group" style="flex: 1; margin-bottom: 14px;">
+                <label class="form-label" for="ws-input-village"><span data-i18n="label_village">Village</span> *</label>
+                <select id="ws-input-village" class="form-input" style="background: var(--bg-input); color: var(--text-primary); cursor: pointer;">
+                  <!-- Populated via script -->
+                </select>
+              </div>
+            </div>
+
+            <div class="ws-form-row">
+              <div class="form-group" style="flex: 1; margin-bottom: 14px;">
+                <label class="form-label" for="ws-input-ph"><span data-i18n="label_ph">pH Level (6.5 - 8.5)</span> *</label>
+                <input type="number" step="0.01" min="0" max="14" id="ws-input-ph" class="form-input" placeholder="7.30" required>
+              </div>
+
+              <div class="form-group" style="flex: 1; margin-bottom: 14px;">
+                <label class="form-label" for="ws-input-turbidity"><span data-i18n="label_turbidity">Turbidity (NTU, ≤ 5.0)</span> *</label>
+                <input type="number" step="0.01" min="0" id="ws-input-turbidity" class="form-input" placeholder="1.80" required>
+              </div>
+            </div>
+
+            <div class="ws-form-row">
+              <div class="form-group" style="flex: 1; margin-bottom: 18px;">
+                <label class="form-label" for="ws-input-bacterial"><span data-i18n="label_bacterial_status">Bacterial Status</span> *</label>
+                <select id="ws-input-bacterial" class="form-input" style="background: var(--bg-input); color: var(--text-primary); cursor: pointer;" required>
+                  <option value="safe">🟢 Safe (Negative / 0 CFU)</option>
+                  <option value="contaminated">🔴 Contaminated (Positive)</option>
+                </select>
+              </div>
+
+              <div class="form-group" style="flex: 1; margin-bottom: 18px;">
+                <label class="form-label" for="ws-input-date"><span data-i18n="label_last_tested">Last Tested Date</span> *</label>
+                <input type="date" id="ws-input-date" class="form-input" style="background: var(--bg-input); color: var(--text-primary); cursor: pointer;" required>
+              </div>
+            </div>
+
+            <div id="ws-form-error" style="display: none; color: #F87171; font-size: 0.82rem; margin-bottom: 14px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); padding: 8px 12px; border-radius: 6px;"></div>
+
+            <div class="ws-modal-actions">
+              <button type="button" class="preset-btn" id="ws-modal-cancel-btn" data-i18n="btn_cancel">Cancel</button>
+              <button type="submit" class="btn-primary" id="ws-modal-submit-btn" data-i18n="btn_save_source">Save Source</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Small Toast Message on Save ("Source saved ✓") -->
+      <div id="ws-toast" class="ws-toast" style="display: none;" role="status">Source saved ✓</div>
+
+      <!-- ==================================================== -->
+      <!-- TAB 12: RECOMMENDED ACTIONS (Feature #10: Decision Support) -->
+      <!-- ==================================================== -->
+      <section id="tab-view-actions" class="ra-view-section" aria-labelledby="ra-page-title" style="display: none;">
+        <!-- Header -->
+        <div class="page-header ra-page-header">
+          <div>
+            <h1 class="page-title" id="ra-page-title" data-i18n="page_recommended_actions">Recommended Actions</h1>
+            <p class="page-subtitle">Evidence-based clinical decision-support and protocol checklists triggered by real-time community risk conditions.</p>
+          </div>
+        </div>
+
+        <!-- Summary Chips (High / Medium / Low counts) -->
+        <div class="ra-summary-row" role="region" aria-label="Action priorities summary">
+          <div class="ra-chip ra-chip-high">
+            <span class="ra-chip-dot pulse-dot"></span>
+            <span class="ra-chip-label">High Priority:</span>
+            <span class="ra-chip-count" id="ra-count-high">0</span>
+          </div>
+          <div class="ra-chip ra-chip-medium">
+            <span class="ra-chip-dot"></span>
+            <span class="ra-chip-label">Medium Priority:</span>
+            <span class="ra-chip-count" id="ra-count-medium">0</span>
+          </div>
+          <div class="ra-chip ra-chip-low">
+            <span class="ra-chip-dot"></span>
+            <span class="ra-chip-label">Low Priority:</span>
+            <span class="ra-chip-count" id="ra-count-low">0</span>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="ra-loading-state" class="ra-state-box" style="display: none;">
+          <div class="trend-spinner"></div>
+          <span data-i18n="msg_loading">Analyzing community risk triggers...</span>
+        </div>
+
+        <!-- Error State -->
+        <div id="ra-error-state" class="ra-state-box ra-error-box" style="display: none;">
+          <span>⚠️ Unable to load recommended actions. Please check network connection.</span>
+          <button type="button" class="btn-primary" id="ra-btn-retry" style="margin-top: 10px; padding: 6px 14px; font-size: 0.82rem;" data-i18n="btn_retry">Retry</button>
+        </div>
+
+        <!-- Friendly Empty State -->
+        <div id="ra-empty-state" class="ra-state-box ra-empty-box" style="display: none;">
+          <div style="font-size: 2.2rem; margin-bottom: 8px;">✅</div>
+          <h3 style="font-size: 1.05rem; font-weight: 700;" data-i18n="msg_all_clear">No actions needed right now. All clear ✅</h3>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">All monitored villages and water parameters are within standard safety thresholds.</p>
+        </div>
+
+        <!-- Responsive Grid of Recommendation Cards (2 cols desktop, 1 tablet/mobile) -->
+        <div class="ra-grid" id="ra-grid"></div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- TAB 13: HEALTH AWARENESS & PREVENTION (Feature #12)  -->
+      <!-- ==================================================== -->
+      <section id="tab-view-awareness" class="aw-view-section" style="display: none;">
+        <!-- Header with Title, Subtitle, and Admin Action Button -->
+        <div class="aw-header">
+          <div>
+            <h1 class="page-title" data-i18n="page_awareness">Health Awareness & Prevention</h1>
+            <p class="page-subtitle">Evidence-based community prevention guides and sanitation protocols for field health workers</p>
+          </div>
+          <button type="button" id="aw-btn-add-guide" class="btn-primary aw-btn-add" style="display: none;">
+            <span>➕</span> Add Guide
+          </button>
+        </div>
+
+        <!-- Category Filter Chips -->
+        <div class="aw-filter-bar">
+          <button type="button" class="aw-cat-chip active" data-category="all">
+            <span>🌐</span> All Guides
+          </button>
+          <button type="button" class="aw-cat-chip aw-chip-water" data-category="water">
+            <span>💧</span> Safe Water
+          </button>
+          <button type="button" class="aw-cat-chip aw-chip-disease" data-category="disease">
+            <span>🦠</span> Disease Prevention
+          </button>
+          <button type="button" class="aw-cat-chip aw-chip-hygiene" data-category="hygiene">
+            <span>🧼</span> Hand Hygiene
+          </button>
+        </div>
+
+        <!-- Loading State -->
+        <div id="aw-loading-state" class="aw-state-box" style="display: none;">
+          <div class="trend-spinner"></div>
+          <span data-i18n="msg_loading">Loading prevention guides...</span>
+        </div>
+
+        <!-- Error State -->
+        <div id="aw-error-state" class="aw-state-box aw-error-box" style="display: none;">
+          <span>⚠️ Unable to load health awareness content. Please check network connection.</span>
+          <button type="button" class="btn-primary" id="aw-btn-retry" style="margin-top: 10px; padding: 6px 14px; font-size: 0.82rem;" data-i18n="btn_retry">Retry</button>
+        </div>
+
+        <!-- Friendly Empty State -->
+        <div id="aw-empty-state" class="aw-state-box aw-empty-box" style="display: none;">
+          <div style="font-size: 2.2rem; margin-bottom: 8px;">📚</div>
+          <h3 style="font-size: 1.05rem; font-weight: 700;">No awareness guides found</h3>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">There are no guides matching this category or language currently available.</p>
+        </div>
+
+        <!-- Responsive Grid of Awareness Cards (3 cols desktop, 2 tablet, 1 mobile) -->
+        <div class="aw-grid" id="aw-grid"></div>
+
+        <!-- ==================================================== -->
+        <!-- "Read More" Step-by-Step Glass Modal                -->
+        <!-- ==================================================== -->
+        <div id="aw-read-modal-backdrop" class="aw-modal-backdrop" style="display: none;">
+          <div class="aw-modal aw-modal-glass" role="dialog" aria-modal="true" aria-labelledby="aw-read-title">
+            <div class="aw-modal-header">
+              <div class="aw-modal-meta">
+                <span id="aw-read-icon" class="aw-read-modal-icon">💧</span>
+                <div>
+                  <span id="aw-read-cat" class="aw-cat-badge">Water</span>
+                  <h2 id="aw-read-title" class="aw-modal-title">Guide Title</h2>
+                </div>
+              </div>
+              <button type="button" class="aw-modal-close" id="aw-read-modal-close" aria-label="Close modal">×</button>
+            </div>
+            
+            <p id="aw-read-desc" class="aw-read-desc"></p>
+
+            <div class="aw-steps-container">
+              <h4 class="aw-steps-heading">Step-by-Step Prevention Protocol:</h4>
+              <ol id="aw-read-steps-list" class="aw-steps-list"></ol>
+            </div>
+
+            <div class="aw-modal-footer">
+              <button type="button" id="aw-read-copy-btn" class="preset-btn aw-btn-copy" title="Copy text to share in village">
+                <span>📋</span> Copy Text
+              </button>
+              <button type="button" id="aw-read-close-btn" class="btn-primary" style="padding: 8px 18px;">Close</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================================================== -->
+        <!-- Admin Add / Edit Guide Glass Modal                   -->
+        <!-- ==================================================== -->
+        <div id="aw-form-modal-backdrop" class="aw-modal-backdrop" style="display: none;">
+          <div class="aw-modal aw-modal-glass aw-form-modal" role="dialog" aria-modal="true" aria-labelledby="aw-modal-form-title">
+            <div class="aw-modal-header">
+              <h2 id="aw-modal-form-title" class="aw-modal-title">Add Prevention Guide</h2>
+              <button type="button" class="aw-modal-close" id="aw-modal-form-close" aria-label="Close modal">×</button>
+            </div>
+
+            <div id="aw-form-error" class="aw-form-error" style="display: none;"></div>
+
+            <form id="aw-form" class="aw-form">
+              <input type="hidden" id="aw-form-id" value="">
+
+              <div class="form-group">
+                <label class="form-label" for="aw-form-title">Guide Title *</label>
+                <input type="text" id="aw-form-title" class="form-input" placeholder="e.g., Safe Drinking Water" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="aw-form-desc">Short Summary (1 line) *</label>
+                <input type="text" id="aw-form-desc" class="form-input" placeholder="e.g., 5 practical steps to keep drinking water safe" required>
+              </div>
+
+              <div class="aw-form-row">
+                <div class="form-group">
+                  <label class="form-label" for="aw-form-cat">Category *</label>
+                  <select id="aw-form-cat" class="form-input">
+                    <option value="water">💧 Water</option>
+                    <option value="disease">🦠 Disease</option>
+                    <option value="hygiene">🧼 Hygiene</option>
+                    <option value="other">📌 Other</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="aw-form-lang">Language *</label>
+                  <select id="aw-form-lang" class="form-input">
+                    <option value="en">English (en)</option>
+                    <option value="hi">Hindi (hi)</option>
+                    <option value="as">Assamese (as)</option>
+                    <option value="bn">Bengali (bn)</option>
+                    <option value="mni">Manipuri (mni)</option>
+                    <option value="lus">Mizo (lus)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="aw-form-icon">Emoji Icon (optional)</label>
+                  <input type="text" id="aw-form-icon" class="form-input" placeholder="💧" maxlength="4">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="aw-form-content">Action Steps (one per line) *</label>
+                <textarea id="aw-form-content" class="form-input aw-textarea" rows="6" placeholder="Enter practical steps separated by new lines:&#10;Boil water for at least 1 minute&#10;Store in clean, covered containers&#10;..." required></textarea>
+              </div>
+
+              <div class="aw-modal-footer">
+                <button type="button" id="aw-modal-cancel-btn" class="preset-btn" style="padding: 8px 16px;">Cancel</button>
+                <button type="submit" id="aw-modal-submit-btn" class="btn-primary" style="padding: 8px 20px;">Save Guide</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Toast Feedback -->
+        <div id="aw-toast" class="aw-toast" style="display: none;">Content saved ✓</div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- TAB: CASE FOLLOW-UP (Feature #14)                   -->
+      <!-- ==================================================== -->
+      <section id="tab-view-cases" style="display: none;" aria-labelledby="case-page-title">
+        <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+          <div>
+            <h1 id="case-page-title" style="font-size: 1.6rem; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+              <span>📋</span> Case Follow-up
+            </h1>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 4px;">
+              Track reported community cases from first report to recovery
+            </p>
+          </div>
+          <button type="button" id="case-btn-new" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; font-weight: 600;">
+            <span style="font-size: 1.1rem; line-height: 1;">+</span> New Case
+          </button>
+        </div>
+
+        <!-- Filter Tabs: All | Reported | Under Observation | Referred | Recovered -->
+        <div class="case-filters-bar" role="tablist" aria-label="Filter cases by status">
+          <button type="button" class="case-filter-btn active" data-status="ALL">All <span class="case-filter-count" id="count-all">0</span></button>
+          <button type="button" class="case-filter-btn" data-status="REPORTED">Reported <span class="case-filter-count" id="count-reported">0</span></button>
+          <button type="button" class="case-filter-btn" data-status="UNDER_OBSERVATION">Under Observation <span class="case-filter-count" id="count-under_observation">0</span></button>
+          <button type="button" class="case-filter-btn" data-status="REFERRED">Referred <span class="case-filter-count" id="count-referred">0</span></button>
+          <button type="button" class="case-filter-btn" data-status="RECOVERED">Recovered <span class="case-filter-count" id="count-recovered">0</span></button>
+        </div>
+
+        <!-- Loading State -->
+        <div id="case-loading-state" class="case-state-box" style="display: none;">
+          <div class="case-spinner"></div>
+          <span>Loading case records...</span>
+        </div>
+
+        <!-- Error State -->
+        <div id="case-error-state" class="case-state-box case-error-box" style="display: none;">
+          <span>⚠️ Unable to load cases. Please check backend connection.</span>
+          <button type="button" class="btn-primary" id="case-btn-retry" style="margin-top: 10px; padding: 6px 14px; font-size: 0.82rem;">Retry</button>
+        </div>
+
+        <!-- Friendly Empty State -->
+        <div id="case-empty-state" class="case-state-box case-empty-box" style="display: none;">
+          <div style="font-size: 2.2rem; margin-bottom: 8px;">📂</div>
+          <h3 style="font-size: 1.05rem; font-weight: 700;">No cases found</h3>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">There are no cases matching the selected filter.</p>
+        </div>
+
+        <!-- Responsive Grid of Case Cards (1 col mobile, 2-3 desktop) -->
+        <div class="case-grid" id="case-grid"></div>
+
+        <!-- ==================================================== -->
+        <!-- Add / Edit Case Modal (Glassmorphic)                 -->
+        <!-- ==================================================== -->
+        <div id="case-modal-backdrop" class="case-modal-backdrop" style="display: none;">
+          <div class="case-modal case-modal-glass" role="dialog" aria-modal="true" aria-labelledby="case-modal-title">
+            <div class="case-modal-header">
+              <h2 id="case-modal-title" class="case-modal-title">New Case Follow-up</h2>
+              <button type="button" class="case-modal-close" id="case-modal-close" aria-label="Close modal">×</button>
+            </div>
+
+            <div id="case-modal-error" class="case-modal-error" style="display: none;"></div>
+
+            <form id="case-form" class="case-form">
+              <input type="hidden" id="case-form-id" value="">
+
+              <div class="case-form-grid">
+                <div class="form-group">
+                  <label class="form-label" for="case-form-village">Village *</label>
+                  <input type="text" id="case-form-village" class="form-input" placeholder="e.g. Rampur, Sonapur" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="case-form-patient">Patient Name (optional)</label>
+                  <input type="text" id="case-form-patient" class="form-input" placeholder="Anonymous">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="case-form-reported">Reported Date *</label>
+                  <input type="date" id="case-form-reported" class="form-input" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="case-form-followup">Follow-up Date</label>
+                  <input type="date" id="case-form-followup" class="form-input">
+                </div>
+              </div>
+
+              <!-- Symptom Checkboxes -->
+              <div class="form-group" style="margin-top: 16px;">
+                <label class="form-label" style="margin-bottom: 8px;">Symptoms</label>
+                <div class="case-checkbox-grid">
+                  <label class="case-checkbox-label">
+                    <input type="checkbox" name="symptom" value="Fever" class="case-checkbox">
+                    <span>Fever</span>
+                  </label>
+                  <label class="case-checkbox-label">
+                    <input type="checkbox" name="symptom" value="Diarrhea" class="case-checkbox">
+                    <span>Diarrhea</span>
+                  </label>
+                  <label class="case-checkbox-label">
+                    <input type="checkbox" name="symptom" value="Vomiting" class="case-checkbox">
+                    <span>Vomiting</span>
+                  </label>
+                  <label class="case-checkbox-label">
+                    <input type="checkbox" name="symptom" value="Abdominal Pain" class="case-checkbox">
+                    <span>Abdominal Pain</span>
+                  </label>
+                  <label class="case-checkbox-label">
+                    <input type="checkbox" name="symptom" value="Weakness" class="case-checkbox">
+                    <span>Weakness</span>
+                  </label>
+                  <label class="case-checkbox-label">
+                    <input type="checkbox" name="symptom" value="Dehydration" class="case-checkbox">
+                    <span>Dehydration</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="case-modal-footer" style="margin-top: 24px;">
+                <button type="button" id="case-modal-cancel-btn" class="preset-btn" style="padding: 10px 18px;">Cancel</button>
+                <button type="submit" id="case-modal-submit-btn" class="btn-primary" style="padding: 10px 24px;">Submit Case</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- ==================================================== -->
+        <!-- Update Status Modal with Step Tracker (Glassmorphic)  -->
+        <!-- ==================================================== -->
+        <div id="case-status-modal-backdrop" class="case-modal-backdrop" style="display: none;">
+          <div class="case-modal case-modal-glass case-status-modal" role="dialog" aria-modal="true" aria-labelledby="case-status-title">
+            <div class="case-modal-header">
+              <div>
+                <span id="case-status-modal-number" class="case-number-badge">Case #1024</span>
+                <h2 id="case-status-title" class="case-modal-title" style="margin-top: 4px;">Update Status</h2>
+              </div>
+              <button type="button" class="case-modal-close" id="case-status-modal-close" aria-label="Close modal">×</button>
+            </div>
+
+            <div id="case-status-modal-error" class="case-modal-error" style="display: none;"></div>
+
+            <p id="case-status-modal-patient" style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px;">
+              Patient: <strong style="color: var(--text-primary);" id="case-status-modal-patient-name">Sunita Devi</strong> • Village: <span id="case-status-modal-village">Rampur</span>
+            </p>
+
+            <!-- Horizontal Step Tracker -->
+            <div class="step-tracker-container">
+              <div class="step-tracker" id="case-step-tracker">
+                <div class="step-item" data-step="REPORTED">
+                  <div class="step-node"><span class="step-icon">1</span></div>
+                  <span class="step-label">Reported</span>
+                </div>
+                <div class="step-line" data-line="1"></div>
+                <div class="step-item" data-step="UNDER_OBSERVATION">
+                  <div class="step-node"><span class="step-icon">2</span></div>
+                  <span class="step-label">Under Observation</span>
+                </div>
+                <div class="step-line" data-line="2"></div>
+                <div class="step-item" data-step="REFERRED">
+                  <div class="step-node"><span class="step-icon">3</span></div>
+                  <span class="step-label">Referred</span>
+                </div>
+                <div class="step-line" data-line="3"></div>
+                <div class="step-item" data-step="RECOVERED">
+                  <div class="step-node"><span class="step-icon">4</span></div>
+                  <span class="step-label">Recovered</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dynamic Advance Action Section -->
+            <div id="case-status-actions" class="case-status-action-box">
+              <!-- Dynamically populated based on current status -->
+            </div>
+
+            <div class="case-modal-footer" style="margin-top: 24px;">
+              <button type="button" id="case-status-cancel-btn" class="preset-btn" style="padding: 9px 18px;">Close</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Toast Feedback -->
+        <div id="case-toast" class="case-toast" style="display: none;">Saved successfully ✓</div>
+      </section>
+
+      <!-- ==================================================== -->
+      <!-- TAB: ADMIN REPORTS (Feature #17)                     -->
+      <!-- ==================================================== -->
+      <section id="tab-view-reports" style="display: none;" aria-labelledby="rpt-page-title">
+        
+        <!-- Header & Action Controls -->
+        <div class="rpt-header-bar">
+          <div class="rpt-title-group">
+            <h1 class="page-title" id="rpt-page-title">Monthly Community Health Report</h1>
+            <p class="page-subtitle" id="rpt-period-label">November 2026</p>
+          </div>
+
+          <div class="rpt-actions-toolbar">
+            <!-- Month Selector Dropdown -->
+            <div class="rpt-month-picker-wrap">
+              <label for="rpt-month-select" class="rpt-picker-label">Report Period:</label>
+              <select id="rpt-month-select" class="form-input rpt-select">
+                <option value="2026-11" selected>November 2026 (Current)</option>
+                <option value="2026-10">October 2026</option>
+                <option value="2026-09">September 2026</option>
+                <option value="2026-08">August 2026</option>
+              </select>
+            </div>
+
+            <!-- Action Buttons (Generate PDF & Export CSV) -->
+            <div class="rpt-action-btns">
+              <button type="button" class="btn-primary rpt-btn rpt-btn-pdf" id="rpt-btn-pdf" title="Print or save as PDF">
+                <span>📄</span> Generate PDF
+              </button>
+              <button type="button" class="preset-btn rpt-btn rpt-btn-csv" id="rpt-btn-csv" title="Download report as CSV file">
+                <span>📥</span> Export CSV
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6 Summary Stat Cards (1 col mobile, 2 col tablet, 3 col desktop) -->
+        <div class="rpt-stats-grid">
+          <!-- Card 1: Total villages -->
+          <div class="rpt-stat-card">
+            <div class="rpt-card-top">
+              <span class="rpt-card-label">Total villages</span>
+              <span class="rpt-card-icon">🏘️</span>
+            </div>
+            <div class="rpt-card-number" id="rpt-val-villages">0</div>
+            <span class="rpt-card-sub">Covered under active surveillance</span>
+          </div>
+
+          <!-- Card 2: Total cases -->
+          <div class="rpt-stat-card">
+            <div class="rpt-card-top">
+              <span class="rpt-card-label">Total cases</span>
+              <span class="rpt-card-icon">🩺</span>
+            </div>
+            <div class="rpt-card-number" id="rpt-val-cases">0</div>
+            <span class="rpt-card-sub">Reported community health cases</span>
+          </div>
+
+          <!-- Card 3: Water tests -->
+          <div class="rpt-stat-card">
+            <div class="rpt-card-top">
+              <span class="rpt-card-label">Water tests</span>
+              <span class="rpt-card-icon">💧</span>
+            </div>
+            <div class="rpt-card-number" id="rpt-val-water">0</div>
+            <span class="rpt-card-sub">Source quality &amp; bacterial screenings</span>
+          </div>
+
+          <!-- Card 4: High risk villages (Red accent) -->
+          <div class="rpt-stat-card rpt-accent-red">
+            <div class="rpt-card-top">
+              <span class="rpt-card-label">High risk villages</span>
+              <span class="rpt-card-icon">⚠️</span>
+            </div>
+            <div class="rpt-card-number accent-red" id="rpt-val-high-risk">0</div>
+            <span class="rpt-card-sub">Active outbreak threshold exceeded</span>
+          </div>
+
+          <!-- Card 5: Contaminated sources (Amber accent) -->
+          <div class="rpt-stat-card rpt-accent-amber">
+            <div class="rpt-card-top">
+              <span class="rpt-card-label">Contaminated sources</span>
+              <span class="rpt-card-icon">☣️</span>
+            </div>
+            <div class="rpt-card-number accent-amber" id="rpt-val-contaminated">0</div>
+            <span class="rpt-card-sub">Requiring remediation or boiling notice</span>
+          </div>
+
+          <!-- Card 6: Resolved alerts (Green accent) -->
+          <div class="rpt-stat-card rpt-accent-green">
+            <div class="rpt-card-top">
+              <span class="rpt-card-label">Resolved alerts</span>
+              <span class="rpt-card-icon">✅</span>
+            </div>
+            <div class="rpt-card-number accent-green" id="rpt-val-alerts">0</div>
+            <span class="rpt-card-sub">ASHA &amp; clinician actions completed</span>
+          </div>
+        </div>
+
+        <!-- Highlighted Block: Most Reported Symptom -->
+        <div class="rpt-highlight-card">
+          <div class="rpt-highlight-badge">PRIMARY EPIDEMIOLOGICAL MARKER</div>
+          <div class="rpt-highlight-content">
+            <div class="rpt-highlight-icon">🦠</div>
+            <div class="rpt-highlight-info">
+              <span class="rpt-highlight-lead">Most reported symptom</span>
+              <h2 class="rpt-highlight-title" id="rpt-top-symptom-name">Diarrhea</h2>
+              <p class="rpt-highlight-desc" id="rpt-top-symptom-count">78 reported cases this month</p>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Application Logic Scripts -->
+  <script src="/static/js/i18n.js"></script>
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/app.js"></script>
+  <!-- Feature #15: Offline / Low Connectivity Mode Controller -->
+  <script src="/static/js/offline_sync.js"></script>
+  <script src="/static/js/community_reports.js"></script>
+  <script src="/static/js/village_risk_data.js"></script>
+  <script src="/static/js/village_risk.js"></script>
+  <script src="/static/js/disease_risk.js"></script>
+  <!-- Leaflet JS & Community Risk Map Controller (Feature #7) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="/static/js/community_risk_map.js"></script>
+  <!-- Health Trends Controller (Feature #8) -->
+  <script src="/static/js/health_trends.js"></script>
+  <!-- Water Sources Controller (Feature #9) -->
+  <script src="/static/js/water_sources.js"></script>
+  <!-- Recommended Actions Controller (Feature #10) -->
+  <script src="/static/js/recommended_actions.js"></script>
+  <!-- Health Awareness Controller (Feature #12) -->
+  <script src="/static/js/awareness.js"></script>
+  <!-- Feature #13: Patient Community Link -->
+  <script src="/static/js/patient_community_link.js"></script>
+  <!-- Feature #14: Case Follow-up Controller -->
+  <script src="/static/js/case_followup.js"></script>
+  <!-- Feature #16: SMS-Style Alert Simulation Controller -->
+  <script src="/static/js/alert_simulation.js"></script>
+  <!-- Feature #17: Admin Reports Controller -->
+  <script src="/static/js/admin_reports.js"></script>
+  <!-- Feature #18: Simple Seasonal Risk Controller -->
+  <script src="/static/js/seasonal_risk.js"></script>
+  <!-- Feature #19: Simple Weather Data Controller -->
+  <script src="/static/js/weather_risk.js"></script>
+</body>
+</html>

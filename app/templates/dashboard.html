@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Overview Dashboard — VitalWatch</title>
+  <meta name="description" content="Central surveillance and clinical health monitoring overview dashboard.">
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <style>
+    /* ===== Design tokens (matches ASHA dashboard design language) ===== */
+    :root {
+      --font: 'Inter', system-ui, -apple-system, sans-serif;
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      --accent: #6366f1;          /* Indigo accent */
+      --accent-hover: #4f46e5;
+      --accent-glow: rgba(99, 102, 241, 0.25);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --radius-badge: 9999px;
+      --transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+
+      /* Glassmorphism */
+      --glass-bg: rgba(255, 255, 255, 0.06);
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --glass-blur: blur(16px);
+
+      /* Panel tokens */
+      --panel-bg: rgba(255, 255, 255, 0.035);
+      --panel-border: rgba(255, 255, 255, 0.08);
+    }
+
+    /* ===== Reset ===== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg-gradient);
+      min-height: 100vh;
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== Top bar (Glassmorphism) ===== */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      height: 64px;
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+
+    .topbar-brand .icon-logo {
+      font-size: 1.4rem;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+
+    .topbar-brand h1 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topbar-brand .brand-sub {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-secondary);
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .user-name {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: var(--radius-badge);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      background: rgba(99, 102, 241, 0.18);
+      border: 1px solid rgba(99, 102, 241, 0.4);
+      color: #a5b4fc;
+    }
+
+    .btn-logout {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(239, 68, 68, 0.14);
+      border: 1px solid rgba(239, 68, 68, 0.28);
+      color: #f87171;
+      padding: 7px 15px;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: var(--font);
+    }
+
+    .btn-logout:hover {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: rgba(239, 68, 68, 0.45);
+      transform: translateY(-1px);
+    }
+
+    /* ===== Main Container ===== */
+    .main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 36px 24px 64px;
+    }
+
+    /* ===== Header Greeting ===== */
+    .greeting {
+      margin-bottom: 32px;
+      animation: fadeIn 0.45s ease both;
+    }
+
+    .greeting h2 {
+      font-size: 1.75rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      margin-bottom: 6px;
+    }
+
+    .greeting p {
+      color: var(--text-secondary);
+      font-size: 0.92rem;
+    }
+
+    /* ===== 5 Stat Cards Grid (Responsive: 5 -> 2 -> 1) ===== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 18px;
+      margin-bottom: 36px;
+    }
+
+    /* Collapse to 2 columns on tablet */
+    @media (max-width: 1024px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    /* Collapse to 1 column on mobile */
+    @media (max-width: 580px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Glassmorphism Stat Card */
+    .stat-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border-radius: var(--radius);
+      padding: 22px 18px;
+      transition: var(--transition);
+      animation: fadeIn 0.5s ease both;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .stat-card .card-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.15rem;
+      margin-bottom: 14px;
+    }
+
+    .stat-card .card-value {
+      font-size: 2.1rem;
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 4px;
+      letter-spacing: -0.03em;
+    }
+
+    .stat-card .card-label {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* Card Icon Accents */
+    .icon-indigo  { background: rgba(99, 102, 241, 0.18); color: #818cf8; }
+    .icon-cyan    { background: rgba(6, 182, 212, 0.18);  color: #22d3ee; }
+    .icon-emerald { background: rgba(16, 185, 129, 0.18); color: #34d399; }
+    .icon-amber   { background: rgba(245, 158, 11, 0.18);  color: #fbbf24; }
+    .icon-rose    { background: rgba(239, 68, 68, 0.18);   color: #f87171; }
+
+    /* Stagger Animation */
+    .stat-card:nth-child(1) { animation-delay: 0.05s; }
+    .stat-card:nth-child(2) { animation-delay: 0.10s; }
+    .stat-card:nth-child(3) { animation-delay: 0.15s; }
+    .stat-card:nth-child(4) { animation-delay: 0.20s; }
+    .stat-card:nth-child(5) { animation-delay: 0.25s; }
+
+    /* ===== Lower Section: Risk Overview + Recent Activity ===== */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    /* Stacks full-width on mobile / small screens */
+    @media (max-width: 860px) {
+      .content-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .section-panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: var(--radius);
+      padding: 24px;
+      animation: fadeIn 0.6s ease both;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title i {
+      color: var(--accent);
+    }
+
+    .section-sub {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
+
+    /* ===== Risk Table ===== */
+    .risk-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    .risk-table th {
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .risk-table td {
+      padding: 12px;
+      font-size: 0.88rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-primary);
+    }
+
+    .risk-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .village-name {
+      font-weight: 600;
+    }
+
+    .village-district {
+      color: var(--text-secondary);
+      font-size: 0.82rem;
+    }
+
+    /* Colored Risk Badges */
+    .badge-risk {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: var(--radius-badge);
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-risk::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .badge-low {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge-low::before { background: #34d399; }
+
+    .badge-medium {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .badge-medium::before { background: #fbbf24; }
+
+    .badge-high {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .badge-high::before { background: #f87171; }
+
+    /* ===== Recent Activity List ===== */
+    .activity-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .activity-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+    }
+
+    .activity-item:hover {
+      background: rgba(255, 255, 255, 0.045);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .activity-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      flex-shrink: 0;
+    }
+
+    .activity-icon.icon-alert {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+    }
+
+    .activity-icon.icon-report {
+      background: rgba(99, 102, 241, 0.15);
+      color: #818cf8;
+    }
+
+    .activity-details {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .activity-msg {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+      word-break: break-word;
+    }
+
+    .activity-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Empty state placeholder */
+    .empty-state {
+      text-align: center;
+      padding: 36px 16px;
+      color: var(--text-muted);
+    }
+
+    .empty-state i {
+      font-size: 2rem;
+      margin-bottom: 10px;
+      opacity: 0.6;
+    }
+
+    .empty-state p {
+      font-size: 0.88rem;
+    }
+
+    /* ===== Auth Guard Overlay ===== */
+    #auth-guard {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #0f172a;
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .guard-box {
+      text-align: center;
+      padding: 32px;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      backdrop-filter: var(--glass-blur);
+      max-width: 380px;
+      width: 90%;
+    }
+
+    .guard-box h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .guard-box p {
+      color: var(--text-secondary);
+      font-size: 0.88rem;
+      margin-bottom: 20px;
+    }
+
+    .btn-login-redirect {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+
+    .btn-login-redirect:hover {
+      background: var(--accent-hover);
+    }
+
+    /* Keyframe Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Auth guard overlay (shown if client has no stored token or user) -->
+  <div id="auth-guard">
+    <div class="guard-box">
+      <div style="font-size: 2.2rem; color: var(--accent); margin-bottom: 12px;">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <h3>Authentication Required</h3>
+      <p>Please log in with your credentials to access the central overview dashboard.</p>
+      <a href="/" class="btn-login-redirect">
+        <i class="fa-solid fa-arrow-left"></i> Go to Login
+      </a>
+    </div>
+  </div>
+
+  <!-- Top bar (Glassmorphism) -->
+  <header class="topbar">
+    <a href="/dashboard" class="topbar-brand">
+      <span class="icon-logo"><i class="fa-solid fa-heart-pulse"></i></span>
+      <h1>VitalWatch <span class="brand-sub">Overview</span></h1>
+    </a>
+    <div class="topbar-right">
+      <div class="user-profile">
+        <span class="user-name" id="user-name-display">—</span>
+        <span class="role-badge" id="user-role-badge">USER</span>
+      </div>
+      <button class="btn-logout" id="logout-btn" title="Sign out of your session">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main" id="main-content">
+
+    <!-- Greeting Banner -->
+    <div class="greeting">
+      <h2>Good <span id="time-greeting">day</span>, <span id="greeting-name">Healthcare Professional</span> 👋</h2>
+      <p>System overview, surveillance metrics, and critical regional health indicators.</p>
+    </div>
+
+    <!-- 5 Stat Cards (Collapses 5 -> 2 -> 1) -->
+    <div class="stats-grid">
+      <!-- 1. Total Villages -->
+      <div class="stat-card">
+        <div class="card-icon icon-indigo">
+          <i class="fa-solid fa-map-location-dot"></i>
+        </div>
+        <div class="card-value" id="stat-villages">{{ stats.totalVillages if stats else 0 }}</div>
+        <div class="card-label">Total Villages</div>
+      </div>
+
+      <!-- 2. Total ASHA Workers -->
+      <div class="stat-card">
+        <div class="card-icon icon-cyan">
+          <i class="fa-solid fa-user-nurse"></i>
+        </div>
+        <div class="card-value" id="stat-workers">{{ stats.totalAshaWorkers if stats else 0 }}</div>
+        <div class="card-label">Total ASHA Workers</div>
+      </div>
+
+      <!-- 3. Total Reports Today -->
+      <div class="stat-card">
+        <div class="card-icon icon-emerald">
+          <i class="fa-solid fa-file-medical"></i>
+        </div>
+        <div class="card-value" id="stat-reports">{{ stats.totalReportsToday if stats else 0 }}</div>
+        <div class="card-label">Total Reports Today</div>
+      </div>
+
+      <!-- 4. Active Alerts -->
+      <div class="stat-card">
+        <div class="card-icon icon-amber">
+          <i class="fa-solid fa-bell"></i>
+        </div>
+        <div class="card-value" id="stat-alerts">{{ stats.activeAlerts if stats else 0 }}</div>
+        <div class="card-label">Active Alerts</div>
+      </div>
+
+      <!-- 5. High Risk Villages -->
+      <div class="stat-card">
+        <div class="card-icon icon-rose">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div class="card-value" id="stat-highrisk">{{ stats.highRiskVillages if stats else 0 }}</div>
+        <div class="card-label">High Risk Villages</div>
+      </div>
+    </div>
+
+    <!-- Lower Section: Risk Overview (Left) & Recent Activity (Right) -->
+    <div class="content-grid">
+
+      <!-- Risk Overview Section -->
+      <section class="section-panel">
+        <div class="section-header">
+          <div class="section-title">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>High Priority Villages</span>
+          </div>
+          <span class="section-sub">Top 5 by risk severity</span>
+        </div>
+
+        <div id="risk-overview-content">
+          {% if stats and stats.topRiskVillages and stats.topRiskVillages|length > 0 %}
+          <table class="risk-table">
+            <thead>
+              <tr>
+                <th>Village</th>
+                <th>District</th>
+                <th>Risk Level</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for v in stats.topRiskVillages %}
+              <tr>
+                <td class="village-name">{{ v.name }}</td>
+                <td class="village-district">{{ v.district }}</td>
+                <td>
+                  {% if v.risk_level == 'HIGH' %}
+                  <span class="badge-risk badge-high">High Risk</span>
+                  {% elif v.risk_level == 'MEDIUM' %}
+                  <span class="badge-risk badge-medium">Medium</span>
+                  {% else %}
+                  <span class="badge-risk badge-low">Low Risk</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="empty-state">
+            <i class="fa-solid fa-check-circle"></i>
+            <p>No risk data available yet.</p>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+
+      <!-- Recent Activity Section -->
+      <section class="section-panel">
+        <div class="section-header">
+          <div class="section-title">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <span>Recent Activity</span>
+          </div>
+          <span class="section-sub">Latest 5 events</span>
+        </div>
+
+        <div id="recent-activity-content">
+          {% if stats and stats.recentActivity and stats.recentActivity|length > 0 %}
+          <div class="activity-list">
+            {% for item in stats.recentActivity %}
+            <div class="activity-item">
+              <div class="activity-icon {{ 'icon-alert' if item.type == 'alert' else 'icon-report' }}">
+                <i class="fa-solid {{ 'fa-bell' if item.type == 'alert' else 'fa-file-lines' }}"></i>
+              </div>
+              <div class="activity-details">
+                <div class="activity-msg">{{ item.message }}</div>
+                <div class="activity-meta">
+                  {% if item.timestamp %}
+                  {{ item.timestamp[:19].replace('T', ' ') }} (UTC)
+                  {% else %}
+                  Recently recorded
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="empty-state">
+            <i class="fa-solid fa-inbox"></i>
+            <p>No recent activity</p>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <script>
+    // ── Local Storage Keys ──────────────────────────────────────────────
+    const TOKEN_KEY = "vitalwatch_token";
+    const USER_KEY  = "vitalwatch_user";
+
+    function getToken() { return localStorage.getItem(TOKEN_KEY); }
+    function getUser() {
+      try { return JSON.parse(localStorage.getItem(USER_KEY)); }
+      catch { return null; }
+    }
+
+    // ── Auth Guard & Profile Population ─────────────────────────────────
+    const token = getToken();
+    const user = getUser();
+
+    if (!token || !user) {
+      window.location.replace("/");
+    } else {
+      const fullName = user.full_name || user.name || "User";
+      const rawRole = (user.role || "COMMUNITY_USER").toUpperCase();
+      const roleLabel = rawRole.replace(/_/g, " ");
+
+      document.getElementById("user-name-display").textContent = fullName;
+      document.getElementById("user-role-badge").textContent = roleLabel;
+      document.getElementById("greeting-name").textContent = fullName.split(" ")[0];
+
+      // Time-of-day greeting
+      const currentHour = new Date().getHours();
+      const timeGreeting = currentHour < 12 ? "morning" : currentHour < 17 ? "afternoon" : "evening";
+      document.getElementById("time-greeting").textContent = timeGreeting;
+    }
+
+    // ── Logout Action ────────────────────────────────────────────────────
+    document.getElementById("logout-btn").addEventListener("click", () => {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      window.location.href = "/";
+    });
+
+    // ── Count-Up Number Animation ────────────────────────────────────────
+    function animateCountUp(elementId, targetNumber, duration = 800) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      const target = parseInt(targetNumber, 10);
+      if (isNaN(target)) {
+        el.textContent = targetNumber;
+        return;
+      }
+      const startTime = performance.now();
+      function tick(currentTime) {
+        const progress = Math.min((currentTime - startTime) / duration, 1);
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.round(easeOut * target);
+        if (progress < 1) {
+          requestAnimationFrame(tick);
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+
+    // ── Dynamic Refresh via API ──────────────────────────────────────────
+    async function refreshDashboardData() {
+      try {
+        const headers = {};
+        if (token) {
+          headers["Authorization"] = "Bearer " + token;
+        }
+        const res = await fetch("/api/dashboard", { headers });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // Animate stat counters
+        animateCountUp("stat-villages", data.totalVillages ?? 0);
+        animateCountUp("stat-workers",  data.totalAshaWorkers ?? 0);
+        animateCountUp("stat-reports",  data.totalReportsToday ?? 0);
+        animateCountUp("stat-alerts",   data.activeAlerts ?? 0);
+        animateCountUp("stat-highrisk", data.highRiskVillages ?? 0);
+
+        // Update Risk Overview if topRiskVillages present
+        if (data.topRiskVillages && data.topRiskVillages.length > 0) {
+          renderRiskOverview(data.topRiskVillages);
+        }
+
+        // Update Recent Activity
+        if (data.recentActivity && data.recentActivity.length > 0) {
+          renderRecentActivity(data.recentActivity);
+        }
+      } catch (err) {
+        console.error("Dashboard API refresh failed:", err);
+      }
+    }
+
+    function renderRiskOverview(villages) {
+      const container = document.getElementById("risk-overview-content");
+      if (!container) return;
+
+      let html = `<table class="risk-table">
+        <thead>
+          <tr>
+            <th>Village</th>
+            <th>District</th>
+            <th>Risk Level</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+      villages.forEach(v => {
+        const level = (v.risk_level || "LOW").toUpperCase();
+        let badgeClass = "badge-low";
+        let label = "Low Risk";
+        if (level === "HIGH") {
+          badgeClass = "badge-high";
+          label = "High Risk";
+        } else if (level === "MEDIUM") {
+          badgeClass = "badge-medium";
+          label = "Medium";
+        }
+
+        html += `<tr>
+          <td class="village-name">${escapeHtml(v.name)}</td>
+          <td class="village-district">${escapeHtml(v.district)}</td>
+          <td><span class="badge-risk ${badgeClass}">${label}</span></td>
+        </tr>`;
+      });
+
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+    }
+
+    function renderRecentActivity(activities) {
+      const container = document.getElementById("recent-activity-content");
+      if (!container) return;
+
+      if (!activities || activities.length === 0) {
+        container.innerHTML = `<div class="empty-state"><i class="fa-solid fa-inbox"></i><p>No recent activity</p></div>`;
+        return;
+      }
+
+      let html = `<div class="activity-list">`;
+      activities.forEach(item => {
+        const isAlert = item.type === "alert";
+        const iconClass = isAlert ? "icon-alert" : "icon-report";
+        const faIcon = isAlert ? "fa-bell" : "fa-file-lines";
+        let timeStr = "Recently";
+        if (item.timestamp) {
+          timeStr = item.timestamp.substring(0, 19).replace("T", " ") + " (UTC)";
+        }
+
+        html += `<div class="activity-item">
+          <div class="activity-icon ${iconClass}">
+            <i class="fa-solid ${faIcon}"></i>
+          </div>
+          <div class="activity-details">
+            <div class="activity-msg">${escapeHtml(item.message || "")}</div>
+            <div class="activity-meta">${timeStr}</div>
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+      container.innerHTML = html;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Trigger animation and dynamic refresh on load
+    document.addEventListener("DOMContentLoaded", () => {
+      // Trigger initial count-up for server-rendered values
+      const statVillages = document.getElementById("stat-villages");
+      const statWorkers = document.getElementById("stat-workers");
+      const statReports = document.getElementById("stat-reports");
+      const statAlerts = document.getElementById("stat-alerts");
+      const statHighrisk = document.getElementById("stat-highrisk");
+
+      if (statVillages) animateCountUp("stat-villages", statVillages.textContent.trim());
+      if (statWorkers) animateCountUp("stat-workers", statWorkers.textContent.trim());
+      if (statReports) animateCountUp("stat-reports", statReports.textContent.trim());
+      if (statAlerts) animateCountUp("stat-alerts", statAlerts.textContent.trim());
+      if (statHighrisk) animateCountUp("stat-highrisk", statHighrisk.textContent.trim());
+
+      // Fetch fresh stats from API
+      refreshDashboardData();
+    });
+  </script>
+</body>
+</html>

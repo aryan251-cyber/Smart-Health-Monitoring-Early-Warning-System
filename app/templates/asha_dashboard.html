@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ASHA Dashboard — VitalWatch</title>
+  <meta name="description" content="ASHA Worker Dashboard for community health monitoring.">
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <style>
+    /* ===== Design tokens ===== */
+    :root {
+      --font: 'Inter', system-ui, sans-serif;
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      --accent: #6366f1;          /* indigo */
+      --accent-hover: #4f46e5;
+      --accent-glow: rgba(99,102,241,0.3);
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
+      /* Glassmorphism */
+      --glass-bg: rgba(255,255,255,0.06);
+      --glass-border: rgba(255,255,255,0.12);
+      --glass-blur: blur(16px);
+    }
+
+    /* ===== Reset ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--bg-gradient);
+      min-height: 100vh;
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== Top bar (glassmorphism) ===== */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 28px;
+      height: 64px;
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .topbar-brand {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .topbar-brand .icon { font-size: 1.4rem; color: var(--accent); }
+    .topbar-brand h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: -0.02em; }
+    .topbar-right { display: flex; align-items: center; gap: 16px; }
+    .worker-name {
+      font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;
+    }
+    .worker-name span { color: var(--text-primary); font-weight: 600; }
+    .btn-logout {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3);
+      color: #ef4444; padding: 6px 14px; border-radius: var(--radius-sm);
+      font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      transition: var(--transition); font-family: var(--font);
+    }
+    .btn-logout:hover { background: rgba(239,68,68,0.25); transform: translateY(-1px); }
+
+    /* ===== Main layout ===== */
+    .main { max-width: 1100px; margin: 0 auto; padding: 36px 24px 60px; }
+
+    /* ===== Greeting ===== */
+    .greeting { margin-bottom: 36px; animation: fadeIn 0.5s ease; }
+    .greeting h2 { font-size: 1.7rem; font-weight: 800; margin-bottom: 4px; }
+    .greeting p { color: var(--text-secondary); font-size: 0.9rem; }
+
+    /* ===== Stat cards grid ===== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 36px;
+    }
+    @media (max-width: 900px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 500px) { .stats-grid { grid-template-columns: 1fr; } }
+
+    /* Glassmorphism stat card */
+    .stat-card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border-radius: var(--radius);
+      padding: 24px 20px;
+      transition: var(--transition);
+      animation: fadeIn 0.5s ease both;
+    }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(0,0,0,0.4); }
+
+    .stat-card .card-icon {
+      width: 42px; height: 42px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; margin-bottom: 14px;
+    }
+    .stat-card .card-value {
+      font-size: 2.2rem; font-weight: 800; line-height: 1;
+      margin-bottom: 4px; letter-spacing: -0.03em;
+    }
+    .stat-card .card-label { font-size: 0.82rem; color: var(--text-secondary); font-weight: 500; }
+
+    /* Icon color variants */
+    .icon-indigo { background: rgba(99,102,241,0.18); color: #818cf8; }
+    .icon-emerald { background: rgba(16,185,129,0.18); color: #34d399; }
+    .icon-amber  { background: rgba(245,158,11,0.18);  color: #fbbf24; }
+    .icon-rose   { background: rgba(239,68,68,0.18);   color: #f87171; }
+
+    /* ===== Section title ===== */
+    .section-title { font-size: 1rem; font-weight: 700; margin-bottom: 16px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
+
+    /* ===== Action buttons grid ===== */
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 900px) { .actions-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 500px) { .actions-grid { grid-template-columns: 1fr; } }
+
+    .action-btn {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 10px; padding: 20px 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      font-family: var(--font); font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; text-decoration: none; text-align: center;
+      transition: var(--transition);
+      animation: fadeIn 0.6s ease both;
+    }
+    .action-btn i { font-size: 1.3rem; color: var(--accent); }
+    .action-btn:hover {
+      background: rgba(99,102,241,0.12);
+      border-color: rgba(99,102,241,0.4);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(99,102,241,0.2);
+    }
+
+    /* ===== Fade-in keyframe ===== */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Stagger animation delays */
+    .stat-card:nth-child(1) { animation-delay: 0.05s; }
+    .stat-card:nth-child(2) { animation-delay: 0.10s; }
+    .stat-card:nth-child(3) { animation-delay: 0.15s; }
+    .stat-card:nth-child(4) { animation-delay: 0.20s; }
+    .action-btn:nth-child(1) { animation-delay: 0.25s; }
+    .action-btn:nth-child(2) { animation-delay: 0.30s; }
+    .action-btn:nth-child(3) { animation-delay: 0.35s; }
+    .action-btn:nth-child(4) { animation-delay: 0.40s; }
+    .action-btn:nth-child(5) { animation-delay: 0.45s; }
+
+    /* ===== Auth guard overlay ===== */
+    #auth-guard { display: none; position: fixed; inset: 0; background: #0f172a; z-index: 999; align-items: center; justify-content: center; }
+    .guard-box { text-align: center; }
+    .guard-box p { color: var(--text-secondary); margin-bottom: 16px; }
+    .guard-box a { color: var(--accent); }
+  </style>
+</head>
+<body>
+
+  <!-- Auth guard (shown if not authenticated or wrong role) -->
+  <div id="auth-guard">
+    <div class="guard-box">
+      <p>You must be logged in as an ASHA Worker.</p>
+      <a href="/">← Back to login</a>
+    </div>
+  </div>
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="topbar-brand">
+      <span class="icon"><i class="fa-solid fa-heart-pulse"></i></span>
+      <h1>ASHA Dashboard</h1>
+    </div>
+    <div class="topbar-right">
+      <a href="/asha/profile" title="View ASHA Profile" style="text-decoration:none; display:flex; align-items:center; gap:8px;">
+        <i class="fa-solid fa-id-badge" style="color:var(--accent);"></i>
+        <span class="worker-name">Welcome, <span id="worker-name-display">—</span></span>
+      </a>
+      <button class="btn-logout" id="logout-btn">
+        <i class="fa-solid fa-right-from-bracket"></i> Logout
+      </button>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="main" id="main-content">
+
+    <!-- Greeting -->
+    <div class="greeting">
+      <h2>Good <span id="time-of-day">day</span>, <span id="greeting-name">—</span> 👋</h2>
+      <p>Here's your community health overview for today.</p>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="card-icon icon-indigo"><i class="fa-solid fa-map-location-dot"></i></div>
+        <div class="card-value" id="stat-villages">—</div>
+        <div class="card-label">Assigned Villages</div>
+      </div>
+      <div class="stat-card">
+        <div class="card-icon icon-emerald"><i class="fa-solid fa-file-medical"></i></div>
+        <div class="card-value" id="stat-reports">—</div>
+        <div class="card-label">Today's Reports</div>
+      </div>
+      <div class="stat-card">
+        <div class="card-icon icon-amber"><i class="fa-solid fa-bell"></i></div>
+        <div class="card-value" id="stat-alerts">—</div>
+        <div class="card-label">Active Alerts</div>
+      </div>
+      <div class="stat-card">
+        <div class="card-icon icon-rose"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="card-value" id="stat-highrisk">—</div>
+        <div class="card-label">High Risk Areas</div>
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="section-title">Quick Actions</div>
+    <div class="actions-grid">
+      <a href="/asha/report-patient" class="action-btn">
+        <i class="fa-solid fa-user-plus"></i>
+        <span>+ Report Patient</span>
+      </a>
+      <a href="/asha/report-symptoms" class="action-btn">
+        <i class="fa-solid fa-thermometer"></i>
+        <span>+ Report Symptoms</span>
+      </a>
+      <a href="/asha/stub/report-water" class="action-btn">
+        <i class="fa-solid fa-droplet"></i>
+        <span>+ Report Water Problem</span>
+      </a>
+      <a href="/asha/villages" class="action-btn">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>View Village Risk</span>
+      </a>
+      <a href="/asha/stub/view-alerts" class="action-btn">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span>View Alerts</span>
+      </a>
+    </div>
+
+  </main>
+
+  <script>
+    // ── Helpers ──────────────────────────────────────────────────────────
+    const TOKEN_KEY = "vitalwatch_token";
+    const USER_KEY  = "vitalwatch_user";
+
+    function getToken() { return localStorage.getItem(TOKEN_KEY); }
+    function getUser()  {
+      try { return JSON.parse(localStorage.getItem(USER_KEY)); }
+      catch { return null; }
+    }
+
+    // ── Auth guard ────────────────────────────────────────────────────────
+    const token = getToken();
+    const user  = getUser();
+    if (!token || !user || user.role !== "ASHA_WORKER") {
+      window.location.replace("/");
+    } else {
+      // Set worker name
+      const name = user.full_name || "ASHA Worker";
+      document.getElementById("worker-name-display").textContent = name;
+      document.getElementById("greeting-name").textContent = name.split(" ")[0];
+      // Time of day greeting
+      const h = new Date().getHours();
+      document.getElementById("time-of-day").textContent =
+        h < 12 ? "morning" : h < 17 ? "afternoon" : "evening";
+    }
+
+    // ── Logout ────────────────────────────────────────────────────────────
+    document.getElementById("logout-btn").addEventListener("click", () => {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      window.location.href = "/";
+    });
+
+    // ── Fetch dashboard stats ─────────────────────────────────────────────
+    async function loadStats() {
+      try {
+        const res = await fetch("/api/asha/dashboard", {
+          headers: { "Authorization": "Bearer " + getToken() }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        countUp("stat-villages", data.assignedVillages ?? 0);
+        countUp("stat-reports",  data.todaysReports   ?? 0);
+        countUp("stat-alerts",   data.activeAlerts    ?? 0);
+        countUp("stat-highrisk", data.highRiskAreas   ?? 0);
+      } catch (e) {
+        console.error("Stats fetch failed:", e);
+      }
+    }
+
+    // Count-up animation
+    function countUp(id, target, duration = 900) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const start = performance.now();
+      function step(now) {
+        const progress = Math.min((now - start) / duration, 1);
+        const ease = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+        el.textContent = Math.round(ease * target);
+        if (progress < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    if (token && user && user.role === "ASHA_WORKER") {
+      loadStats();
+    }
+  </script>
+</body>
+</html>

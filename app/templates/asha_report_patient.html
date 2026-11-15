@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report Patient — VitalWatch ASHA</title>
+  <meta name="description" content="File a new patient health report.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <style>
+    /* ===== Same design tokens as the rest of the app ===== */
+    :root {
+      --font: 'Inter', system-ui, sans-serif;
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      --glass-bg: rgba(255, 255, 255, 0.06);
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --glass-blur: blur(16px);
+      --input-bg: rgba(255, 255, 255, 0.05);
+      --input-border: rgba(255, 255, 255, 0.12);
+      --error: #f87171;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg-gradient);
+      min-height: 100vh;
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== Glass card ===== */
+    .card {
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      padding: 44px 36px 36px;
+      max-width: 520px;
+      width: 100%;
+      animation: fadeIn 0.45s ease both;
+    }
+
+    @media (max-width: 560px) {
+      .card { padding: 32px 20px 28px; }
+    }
+
+    /* ===== Header section ===== */
+    .icon-wrap {
+      width: 64px; height: 64px;
+      border-radius: 18px;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem; color: var(--accent);
+      margin: 0 auto 20px;
+    }
+
+    .card-title {
+      text-align: center;
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .card-subtitle {
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-bottom: 28px;
+    }
+
+    /* ===== Form fields ===== */
+    .form-group { margin-bottom: 18px; }
+
+    .form-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 7px;
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-family: var(--font);
+      font-size: 0.92rem;
+      padding: 10px 14px;
+      transition: var(--transition);
+      appearance: none;
+      -webkit-appearance: none;
+      outline: none;
+    }
+
+    /* Subtle glow on focus */
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+      border-color: rgba(99, 102, 241, 0.6);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    }
+
+    .form-input::placeholder,
+    .form-textarea::placeholder { color: var(--text-secondary); opacity: 0.7; }
+
+    .form-textarea {
+      resize: vertical;
+      min-height: 90px;
+      line-height: 1.5;
+    }
+
+    /* Dropdown arrow for selects */
+    .select-wrap {
+      position: relative;
+    }
+    .select-wrap::after {
+      content: "\f107"; /* fa-chevron-down */
+      font-family: "Font Awesome 6 Free";
+      font-weight: 900;
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-secondary);
+      pointer-events: none;
+    }
+    .form-select option { background: #1e1b4b; color: var(--text-primary); }
+
+    /* Risk level row with badge preview */
+    .risk-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .risk-row .select-wrap { flex: 1; }
+
+    .risk-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 12px;
+      border-radius: 99px;
+      font-size: 0.76rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      white-space: nowrap;
+      transition: var(--transition);
+    }
+    .risk-badge::before {
+      content: ""; width: 6px; height: 6px; border-radius: 50%;
+    }
+    .risk-LOW    { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+    .risk-LOW::before    { background: #34d399; }
+    .risk-MEDIUM { background: rgba(245,158,11,0.15);  color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+    .risk-MEDIUM::before { background: #fbbf24; }
+    .risk-HIGH   { background: rgba(239,68,68,0.15);   color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+    .risk-HIGH::before   { background: #f87171; }
+
+    /* Inline field error */
+    .field-error {
+      font-size: 0.78rem;
+      color: var(--error);
+      margin-top: 5px;
+      display: none;
+    }
+    .field-error.visible { display: block; }
+    .form-input.error-border,
+    .form-select.error-border,
+    .form-textarea.error-border {
+      border-color: rgba(239, 68, 68, 0.55);
+    }
+
+    /* ===== Buttons ===== */
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 28px;
+    }
+    @media (max-width: 400px) {
+      .btn-row { flex-direction: column; }
+    }
+
+    .btn-primary {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 11px 20px;
+      font-family: var(--font);
+      font-size: 0.9rem; font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
+    }
+    .btn-primary:disabled { opacity: 0.65; cursor: not-allowed; }
+
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-secondary);
+      padding: 11px 20px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font);
+      font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; text-decoration: none;
+      transition: var(--transition);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.13);
+      color: var(--text-primary);
+      transform: translateY(-1px);
+    }
+
+    /* ===== Success overlay (shows briefly before redirect) ===== */
+    .success-overlay {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px 0 8px;
+    }
+    .success-overlay.active { display: flex; animation: scaleIn 0.35s cubic-bezier(0.16,1,0.3,1) both; }
+
+    .success-icon {
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; color: #34d399;
+      margin-bottom: 16px;
+    }
+
+    .success-title { font-size: 1.25rem; font-weight: 800; margin-bottom: 6px; }
+    .success-sub { color: var(--text-secondary); font-size: 0.88rem; }
+
+    /* ===== Animations ===== */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.85); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card" id="main-card">
+
+    <!-- Form view -->
+    <div id="form-view">
+      <!-- Icon badge -->
+      <div class="icon-wrap">
+        <i class="fa-solid fa-clipboard-user"></i>
+      </div>
+
+      <h1 class="card-title">Report Patient</h1>
+      <p class="card-subtitle">Fill in the patient details below.</p>
+
+      <form id="report-form" novalidate>
+
+        <!-- Patient Name -->
+        <div class="form-group">
+          <label class="form-label" for="patient-name">Patient Name</label>
+          <input type="text" id="patient-name" class="form-input" placeholder="e.g. Ravi Kumar" autocomplete="off">
+          <div class="field-error" id="err-name"></div>
+        </div>
+
+        <!-- Age + Gender row -->
+        <div style="display: flex; gap: 12px;">
+          <div class="form-group" style="flex: 1;">
+            <label class="form-label" for="patient-age">Age</label>
+            <input type="number" id="patient-age" class="form-input" placeholder="e.g. 35" min="1" max="150">
+            <div class="field-error" id="err-age"></div>
+          </div>
+          <div class="form-group" style="flex: 1.2;">
+            <label class="form-label" for="patient-gender">Gender</label>
+            <div class="select-wrap">
+              <select id="patient-gender" class="form-select">
+                <option value="">— Select —</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="field-error" id="err-gender"></div>
+          </div>
+        </div>
+
+        <!-- Village -->
+        <div class="form-group">
+          <label class="form-label" for="patient-village">Village</label>
+          <div class="select-wrap">
+            <select id="patient-village" class="form-select">
+              <option value="">— Loading villages… —</option>
+            </select>
+          </div>
+          <div class="field-error" id="err-village"></div>
+        </div>
+
+        <!-- Symptoms -->
+        <div class="form-group">
+          <label class="form-label" for="patient-symptoms">Symptoms</label>
+          <textarea id="patient-symptoms" class="form-textarea" placeholder="Describe observed symptoms…"></textarea>
+          <div class="field-error" id="err-symptoms"></div>
+        </div>
+
+        <!-- Risk Level + badge preview -->
+        <div class="form-group">
+          <label class="form-label">Risk Level</label>
+          <div class="risk-row">
+            <div class="select-wrap">
+              <select id="patient-risk" class="form-select">
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+              </select>
+            </div>
+            <span class="risk-badge risk-LOW" id="risk-preview">Low Risk</span>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="btn-row">
+          <button type="submit" class="btn-primary" id="submit-btn">
+            <i class="fa-solid fa-paper-plane"></i> Submit Report
+          </button>
+          <a href="/asha/dashboard" class="btn-secondary">
+            <i class="fa-solid fa-arrow-left"></i> Back
+          </a>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Success overlay (shown briefly after submit) -->
+    <div class="success-overlay" id="success-view">
+      <div class="success-icon"><i class="fa-solid fa-check"></i></div>
+      <div class="success-title">Report Submitted!</div>
+      <div class="success-sub">Redirecting to dashboard…</div>
+    </div>
+
+  </div>
+
+  <script>
+    // ── Auth guard: ASHA workers only ──────────────────────────────────────
+    const TOKEN_KEY = "vitalwatch_token";
+    const USER_KEY  = "vitalwatch_user";
+    const token = localStorage.getItem(TOKEN_KEY);
+    const user  = (() => { try { return JSON.parse(localStorage.getItem(USER_KEY)); } catch { return null; }})();
+    if (!token || !user || user.role !== "ASHA_WORKER") {
+      window.location.href = "/";
+    }
+
+    // ── Populate village dropdown from API ─────────────────────────────────
+    async function loadVillages() {
+      try {
+        const res = await fetch("/api/asha/villages", {
+          headers: { "Authorization": "Bearer " + token }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const sel = document.getElementById("patient-village");
+        sel.innerHTML = "<option value=''>— Select village —</option>";
+        (data.villages || []).forEach(v => {
+          const opt = document.createElement("option");
+          opt.value = v.id;
+          opt.textContent = `${v.name} (${v.district})`;
+          sel.appendChild(opt);
+        });
+      } catch (e) {
+        console.error("Village load failed:", e);
+      }
+    }
+    loadVillages();
+
+    // ── Live risk badge preview ────────────────────────────────────────────
+    const riskSel = document.getElementById("patient-risk");
+    const riskPreview = document.getElementById("risk-preview");
+    const riskLabels = { LOW: "Low Risk", MEDIUM: "Medium Risk", HIGH: "High Risk" };
+
+    function updateRiskPreview() {
+      const val = riskSel.value;
+      riskPreview.className = `risk-badge risk-${val}`;
+      riskPreview.textContent = riskLabels[val] || val;
+    }
+    riskSel.addEventListener("change", updateRiskPreview);
+
+    // ── Helpers to show / clear field errors ──────────────────────────────
+    function setError(inputId, errId, msg) {
+      const el = document.getElementById(inputId);
+      const err = document.getElementById(errId);
+      if (el) el.classList.add("error-border");
+      if (err) { err.textContent = msg; err.classList.add("visible"); }
+    }
+    function clearErrors() {
+      document.querySelectorAll(".field-error").forEach(e => { e.textContent = ""; e.classList.remove("visible"); });
+      document.querySelectorAll(".form-input, .form-select, .form-textarea").forEach(e => e.classList.remove("error-border"));
+    }
+
+    // ── Form submission ────────────────────────────────────────────────────
+    document.getElementById("report-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearErrors();
+
+      const submitBtn = document.getElementById("submit-btn");
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting…';
+
+      const payload = {
+        patient_name: document.getElementById("patient-name").value.trim(),
+        age: parseInt(document.getElementById("patient-age").value, 10),
+        gender: document.getElementById("patient-gender").value,
+        village_id: parseInt(document.getElementById("patient-village").value, 10),
+        symptoms: document.getElementById("patient-symptoms").value.trim(),
+        risk_level: riskSel.value,
+      };
+
+      try {
+        const res = await fetch("/api/asha/report-patient", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+
+        if (res.status === 422 && data.errors) {
+          // Map API validation errors to inline field errors
+          const fieldMap = {
+            patient_name: ["patient-name", "err-name"],
+            age:          ["patient-age",  "err-age"],
+            gender:       ["patient-gender","err-gender"],
+            village_id:   ["patient-village","err-village"],
+            symptoms:     ["patient-symptoms","err-symptoms"],
+          };
+          Object.entries(data.errors).forEach(([field, msg]) => {
+            if (fieldMap[field]) setError(...fieldMap[field], msg);
+          });
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Report';
+          return;
+        }
+
+        if (!res.ok) {
+          alert(data.error || "Failed to submit report. Please try again.");
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Report';
+          return;
+        }
+
+        // Success: show overlay, then redirect
+        document.getElementById("form-view").style.display = "none";
+        document.getElementById("success-view").classList.add("active");
+        setTimeout(() => { window.location.href = "/asha/dashboard"; }, 1800);
+
+      } catch (err) {
+        console.error("Submit error:", err);
+        alert("Network error — please try again.");
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Report';
+      }
+    });
+  </script>
+</body>
+</html>

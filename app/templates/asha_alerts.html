@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Active Alerts — VitalWatch ASHA</title>
+  <meta name="description" content="View active alerts for your assigned villages.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <style>
+    /* ===== Same design tokens as the rest of the app ===== */
+    :root {
+      --font: 'Inter', system-ui, sans-serif;
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --accent-glow: rgba(99, 102, 241, 0.25);
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      --glass-bg: rgba(255, 255, 255, 0.06);
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --glass-blur: blur(16px);
+      /* Alert severity colors */
+      --col-high: #f87171;        /* red */
+      --col-high-bg: rgba(239,68,68,0.12);
+      --col-high-border: rgba(239,68,68,0.35);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg-gradient);
+      min-height: 100vh;
+      color: var(--text-primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 36px 16px 48px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== Outer wrapper (max-width container) ===== */
+    .page-wrap {
+      width: 100%;
+      max-width: 600px;
+      animation: fadeIn 0.4s ease both;
+    }
+
+    /* ===== Page header card ===== */
+    .header-card {
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      padding: 36px 32px 28px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 480px) {
+      .header-card { padding: 24px 18px 20px; }
+    }
+
+    .icon-wrap {
+      width: 64px; height: 64px;
+      border-radius: 18px;
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.25);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem; color: var(--accent);
+      margin: 0 auto 18px;
+    }
+    .page-title  { font-size: 1.5rem; font-weight: 800; margin-bottom: 6px; }
+    .page-sub    { color: var(--text-secondary); font-size: 0.9rem; }
+
+    /* ===== Alert count badge ===== */
+    .count-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--col-high-bg);
+      border: 1px solid var(--col-high-border);
+      color: var(--col-high);
+      padding: 4px 14px;
+      border-radius: 99px;
+      font-size: 0.78rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      margin-top: 14px;
+    }
+    .count-badge.empty {
+      background: rgba(16,185,129,0.1);
+      border-color: rgba(16,185,129,0.3);
+      color: #34d399;
+    }
+
+    /* ===== Alert list ===== */
+    .alert-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+
+    /* ===== Individual alert card ===== */
+    .alert-card {
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      border-left: 4px solid var(--col-high);
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      /* Staggered fade-in via JS-set --delay */
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.35s ease var(--delay, 0s),
+                  transform 0.35s ease var(--delay, 0s),
+                  box-shadow var(--transition);
+    }
+    .alert-card.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .alert-card:hover {
+      box-shadow: 0 4px 20px rgba(239,68,68,0.15);
+      transform: translateY(-2px);
+    }
+    @media (max-width: 480px) {
+      .alert-card { padding: 14px 14px; gap: 12px; }
+    }
+
+    /* ===== Alert icon column ===== */
+    .alert-icon-wrap {
+      flex-shrink: 0;
+      position: relative;
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      background: var(--col-high-bg);
+      border: 1px solid var(--col-high-border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; color: var(--col-high);
+    }
+
+    /* Pulsing dot on the first (newest/highest) alert */
+    .alert-card:first-child .alert-icon-wrap::after {
+      content: "";
+      position: absolute;
+      top: -4px; right: -4px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--col-high);
+      border: 2px solid #0f172a;
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+
+    /* ===== Alert text column ===== */
+    .alert-body { flex: 1; min-width: 0; }
+    .alert-title {
+      font-size: 0.92rem; font-weight: 700;
+      color: var(--text-primary);
+      white-space: normal;
+      word-break: break-word;
+      margin-bottom: 4px;
+    }
+    .alert-meta {
+      display: flex; align-items: center; gap: 10px;
+      flex-wrap: wrap;
+    }
+    .alert-village {
+      font-size: 0.78rem; color: var(--text-secondary);
+      display: flex; align-items: center; gap: 5px;
+    }
+    .alert-time {
+      font-size: 0.75rem; color: var(--text-secondary); opacity: 0.8;
+    }
+    .sev-pill {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      padding: 2px 9px; border-radius: 99px; letter-spacing: 0.05em;
+      background: var(--col-high-bg);
+      border: 1px solid var(--col-high-border);
+      color: var(--col-high);
+    }
+
+    /* ===== Empty state ===== */
+    .empty-state {
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      padding: 48px 24px;
+      text-align: center;
+      margin-bottom: 20px;
+      animation: fadeIn 0.4s ease both;
+    }
+    .empty-icon {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: rgba(16,185,129,0.12);
+      border: 1px solid rgba(16,185,129,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.8rem; color: #34d399;
+      margin: 0 auto 16px;
+    }
+    .empty-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+    .empty-sub   { color: var(--text-secondary); font-size: 0.88rem; }
+
+    /* ===== Loading skeleton ===== */
+    .loading-wrap {
+      display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;
+    }
+    .skeleton {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      height: 72px;
+      animation: shimmer 1.4s ease infinite;
+    }
+
+    /* ===== Back button ===== */
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: var(--text-secondary);
+      padding: 11px 22px; border-radius: var(--radius-sm);
+      font-family: var(--font); font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; text-decoration: none; transition: var(--transition);
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.13); color: var(--text-primary);
+      transform: translateY(-1px);
+    }
+    .btn-wrap { text-align: center; }
+
+    /* ===== Animations ===== */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1);   opacity: 1; }
+      50%       { transform: scale(1.5); opacity: 0.5; }
+    }
+    @keyframes shimmer {
+      0%, 100% { opacity: 0.4; }
+      50%       { opacity: 0.7; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="page-wrap">
+
+    <!-- ===== Page header ===== -->
+    <div class="header-card">
+      <div class="icon-wrap"><i class="fa-solid fa-bell"></i></div>
+      <h1 class="page-title">Active Alerts</h1>
+      <p class="page-sub">Issues needing attention in your villages.</p>
+      <div class="count-badge" id="count-badge" style="display:none;"></div>
+    </div>
+
+    <!-- Loading skeletons (hidden once data arrives) -->
+    <div class="loading-wrap" id="loading">
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+    </div>
+
+    <!-- Alert list (populated by JS) -->
+    <div class="alert-list" id="alert-list" style="display:none;"></div>
+
+    <!-- Empty state (shown when no alerts) -->
+    <div class="empty-state" id="empty-state" style="display:none;">
+      <div class="empty-icon"><i class="fa-solid fa-check"></i></div>
+      <div class="empty-title">No active alerts right now</div>
+      <div class="empty-sub">All villages are looking healthy. Check back later.</div>
+    </div>
+
+    <!-- Back button -->
+    <div class="btn-wrap">
+      <a href="/asha/dashboard" class="btn-secondary" id="back-btn">
+        <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+      </a>
+    </div>
+
+  </div>
+
+  <script>
+    // ── Auth guard ──────────────────────────────────────────────────
+    const TOKEN_KEY = "vitalwatch_token";
+    const USER_KEY  = "vitalwatch_user";
+    const token = localStorage.getItem(TOKEN_KEY);
+    const user  = (() => { try { return JSON.parse(localStorage.getItem(USER_KEY)); } catch { return null; }})();
+    if (!token || !user || user.role !== "ASHA_WORKER") {
+      window.location.href = "/";
+    }
+
+    // ── Icon map: alert type → Font Awesome icon class ───────────────────
+    const TYPE_ICONS = {
+      VILLAGE_RISK: "fa-solid fa-triangle-exclamation",
+      WATER:        "fa-solid fa-droplet",
+      SYMPTOM:      "fa-solid fa-stethoscope",
+    };
+
+    // ── Build one alert card element ───────────────────────────────
+    function buildCard(alert, index) {
+      const card = document.createElement("div");
+      card.className = "alert-card";
+      // Staggered delay: 0.05 s per card, capped at 10 items
+      card.style.setProperty("--delay", `${Math.min(index, 10) * 0.07}s`);
+
+      const icon = TYPE_ICONS[alert.type] || "fa-solid fa-circle-exclamation";
+
+      card.innerHTML = `
+        <div class="alert-icon-wrap">
+          <i class="${icon}"></i>
+        </div>
+        <div class="alert-body">
+          <div class="alert-title">${escHtml(alert.title)}</div>
+          <div class="alert-meta">
+            <span class="alert-village">
+              <i class="fa-solid fa-location-dot" style="font-size:.7rem;"></i>
+              ${escHtml(alert.village)}
+            </span>
+            <span class="sev-pill">${escHtml(alert.severity)}</span>
+            <span class="alert-time">${escHtml(alert.time_ago)}</span>
+          </div>
+        </div>
+      `;
+      return card;
+    }
+
+    // Simple HTML-escape to prevent XSS
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    // ── Fetch and render alerts ────────────────────────────────────
+    async function loadAlerts() {
+      try {
+        const res  = await fetch("/api/asha/alerts", {
+          headers: { "Authorization": "Bearer " + token }
+        });
+        const data = await res.json();
+
+        document.getElementById("loading").style.display = "none";
+
+        const badge = document.getElementById("count-badge");
+        badge.style.display = "inline-flex";
+
+        if (!res.ok || !data.alerts) {
+          badge.textContent = "Error loading";
+          badge.className = "count-badge empty";
+          document.getElementById("empty-state").style.display = "block";
+          return;
+        }
+
+        const alerts = data.alerts;
+
+        if (alerts.length === 0) {
+          badge.textContent = "All clear";
+          badge.className = "count-badge empty";
+          document.getElementById("empty-state").style.display = "block";
+          return;
+        }
+
+        // Show count badge in alert style
+        badge.textContent = `${alerts.length} active alert${alerts.length !== 1 ? "s" : ""}`;
+        badge.className = "count-badge";
+
+        // Render cards
+        const list = document.getElementById("alert-list");
+        list.style.display = "flex";
+        alerts.forEach((a, i) => {
+          const card = buildCard(a, i);
+          list.appendChild(card);
+          // Trigger staggered animation on next frame
+          requestAnimationFrame(() => requestAnimationFrame(() => card.classList.add("visible")));
+        });
+
+      } catch (err) {
+        console.error("Failed to load alerts:", err);
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("empty-state").style.display = "block";
+      }
+    }
+
+    loadAlerts();
+  </script>
+</body>
+</html>
