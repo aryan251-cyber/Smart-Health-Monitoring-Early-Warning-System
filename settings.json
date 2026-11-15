@@ -4,4 +4,10 @@
   "java.autobuild.enabled": true,
   "java.compile.nullAnalysis.mode": "disabled"
 }
+from flask import Flask
 
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "Smart Health Monitoring System is Running!"
