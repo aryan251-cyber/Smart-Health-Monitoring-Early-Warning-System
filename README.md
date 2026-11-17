@@ -1,6 +1,6 @@
 # VitalWatch — Smart Health Monitoring & Early Warning System
 
-VitalWatch is an AI-powered clinical vital sign surveillance web application. It monitors patient physiology, evaluates risk via a dual-layer intelligence engine (clinical NEWS2 rule thresholds + scikit-learn RandomForest Classifier), generates plain-English explanations of clinical abnormalities, and raises automated early warning alerts.
+VitaWatch is an AI-powered clinical vital sign surveillance web application. It monitolrs patient physiology, evaluates risk via a dual-layer intelligence engine (clinical NEWS2 rule thresholds + scikit-learn RandomForest Classifier), generates plain-English explanations of clinical abnormalities, and raises automated early warning alerts.
 
 ---
 

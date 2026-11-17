@@ -105,18 +105,22 @@
   <!-- ==================================================== -->
   <div id="app-view">
 
-    <!-- Frosted-Glass Sidebar -->
-    <aside class="sidebar">
+    <!-- Frosted-Glass Sidebar / Slide-in Mobile Drawer -->
+    <aside class="sidebar" id="app-sidebar" role="navigation" aria-label="Main Navigation">
       <div class="brand">
-        <div class="brand-icon">🫀</div>
-        <div>
-          <div class="brand-title">VitalWatch</div>
-          <span class="brand-badge">Early Warning AI</span>
+        <div class="brand-left">
+          <div class="brand-icon">🫀</div>
+          <div>
+            <div class="brand-title">VitalWatch</div>
+            <span class="brand-badge">Early Warning AI</span>
+          </div>
         </div>
+        <button type="button" id="sidebar-close-btn" class="sidebar-close-btn" aria-label="Close Navigation Drawer">&times;</button>
       </div>
 
-      <!-- Navigation Tabs -->
-      <ul class="nav-menu">
+      <!-- Navigation Tabs (Single Source of Truth for Desktop & Mobile) -->
+      <ul class="nav-menu" id="sidebar-nav-menu">
+        <li class="nav-group-heading">Health</li>
         <li>
           <a class="nav-link active" data-tab="overview">
             <span>🌐</span> <span data-i18n="nav_overview">Overview</span>
@@ -143,6 +147,8 @@
             <span id="sidebar-alerts-badge" class="nav-badge" style="display: none;">0</span>
           </a>
         </li>
+
+        <li class="nav-group-heading">Water</li>
         <li>
           <a class="nav-link" data-tab="water" id="nav-water" aria-label="Water Quality Testing">
             <span>💧</span> <span data-i18n="nav_water_quality">Water Quality</span>
@@ -153,6 +159,8 @@
             <span>🚰</span> <span data-i18n="nav_water_sources">Water Sources</span>
           </a>
         </li>
+
+        <li class="nav-group-heading">Community</li>
         <li>
           <a class="nav-link" data-tab="community" id="nav-community" aria-label="Community Reports">
             <span>📝</span> <span data-i18n="nav_community_reports">Community Reports</span>
@@ -163,6 +171,13 @@
             <span>🛡️</span> <span data-i18n="nav_community_health">Community Health</span>
           </a>
         </li>
+        <li>
+          <a class="nav-link" data-tab="cases" id="nav-cases" aria-label="Case Follow-up">
+            <span>📋</span> <span data-i18n="nav_cases">Case Follow-up</span>
+          </a>
+        </li>
+
+        <li class="nav-group-heading">Insights</li>
         <li>
           <a class="nav-link" data-tab="risk-score" id="nav-risk-score" aria-label="Disease Risk Score Calculator">
             <span>🧮</span> <span data-i18n="nav_risk_score">Risk Score</span>
@@ -189,11 +204,6 @@
           </a>
         </li>
         <li>
-          <a class="nav-link" data-tab="cases" id="nav-cases" aria-label="Case Follow-up">
-            <span>📋</span> <span data-i18n="nav_cases">Case Follow-up</span>
-          </a>
-        </li>
-        <li>
           <a class="nav-link" data-tab="reports" id="nav-reports" aria-label="Admin Reports">
             <span>📊</span> <span data-i18n="nav_reports">Reports</span>
           </a>
@@ -210,6 +220,9 @@
         <button class="btn-logout" title="Sign Out">⎋</button>
       </div>
     </aside>
+
+    <!-- Dimmed Blurred Backdrop for Mobile Drawer -->
+    <div id="sidebar-backdrop" class="sidebar-backdrop" aria-hidden="true"></div>
 
     <!-- Main Content Container -->
     <main class="main-content">
@@ -2498,6 +2511,33 @@
       </section>
 
     </main>
+
+    <!-- Fixed Mobile Bottom Navigation Bar (Mobile / Tablet only) -->
+    <nav class="mobile-bottom-nav" id="mobile-bottom-nav" aria-label="Quick Mobile Navigation">
+      <button type="button" class="bottom-nav-item active" data-tab="dashboard">
+        <span class="bottom-nav-icon">📊</span>
+        <span class="bottom-nav-label">Dashboard</span>
+      </button>
+      <button type="button" class="bottom-nav-item" data-tab="vitals">
+        <span class="bottom-nav-icon">🩺</span>
+        <span class="bottom-nav-label">Log Vitals</span>
+      </button>
+      <button type="button" class="bottom-nav-item" data-tab="alerts">
+        <span class="bottom-nav-icon-wrap">
+          <span class="bottom-nav-icon">🔔</span>
+          <span id="bottom-alerts-badge" class="bottom-nav-badge" style="display: none;">0</span>
+        </span>
+        <span class="bottom-nav-label">Alerts</span>
+      </button>
+      <button type="button" class="bottom-nav-item" data-tab="community">
+        <span class="bottom-nav-icon">📝</span>
+        <span class="bottom-nav-label">Reports</span>
+      </button>
+      <button type="button" class="bottom-nav-item" id="bottom-nav-more" aria-label="Open Navigation Drawer">
+        <span class="bottom-nav-icon">☰</span>
+        <span class="bottom-nav-label">More</span>
+      </button>
+    </nav>
   </div>
 
   <!-- Application Logic Scripts -->

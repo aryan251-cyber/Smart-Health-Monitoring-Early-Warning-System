@@ -3,6 +3,7 @@ import socket
 from pathlib import Path
 from urllib.parse import urlparse
 from flask import Flask, render_template, jsonify
+from sqlalchemy.pool import NullPool
 from app.config import Config
 from app.models import db
 from app.auth import auth_bp, seed_demo_accounts
@@ -18,6 +19,7 @@ from app.water_sources import water_sources_bp, seed_water_sources
 from app.recommended_actions import recommended_actions_bp
 from app.awareness import awareness_bp, seed_awareness_content
 from app.cases import cases_bp, seed_cases
+
 
 def is_database_reachable(db_uri: str, timeout: float = 1.0) -> bool:
     """
@@ -42,18 +44,45 @@ def create_app(config_class=Config):
     app = Flask(__name__, static_folder="static", template_folder="templates")
     app.config.from_object(config_class)
 
-    db_uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
-    
-    # Check MySQL reachability
-    if db_uri.startswith("mysql"):
-        if is_database_reachable(db_uri, timeout=1.0):
-            print(f"[VitalWatch] Connected to MySQL database server.")
-        else:
-            sqlite_path = Path(__file__).resolve().parent.parent / "vitalwatch.db"
-            print(f"[VitalWatch] Notice: MySQL server is not currently reachable at {db_uri}.")
-            print(f"[VitalWatch] Using local fallback SQLite database ({sqlite_path}) for zero-downtime execution.")
-            print(f"[VitalWatch] To use MySQL, start your MySQL service and run 'CREATE DATABASE vitalwatch;'.")
-            app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{sqlite_path}"
+    # Database configuration & URL normalization
+    database_url = os.getenv("DATABASE_URL", "").strip() or app.config.get("SQLALCHEMY_DATABASE_URI", "")
+
+    # Force SQLAlchemy to use PyMySQL
+    if database_url.startswith("mysql://"):
+        database_url = database_url.replace("mysql://", "mysql+pymysql://", 1)
+    elif database_url.startswith("mysql+mysqldb://"):
+        database_url = database_url.replace("mysql+mysqldb://", "mysql+pymysql://", 1)
+
+    if os.getenv("VERCEL"):
+        # Serverless environment (Vercel)
+        if not database_url:
+            raise RuntimeError("DATABASE_URL is missing in Vercel environment")
+        app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+        app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+            "poolclass": NullPool,
+            "pool_pre_ping": True,
+        }
+    else:
+        # Standard server or local development
+        if database_url:
+            app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+            app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+                "pool_pre_ping": True,
+                "pool_recycle": 280,
+            }
+
+        db_uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
+
+        # Check MySQL reachability if using MySQL locally
+        if db_uri.startswith("mysql"):
+            if is_database_reachable(db_uri, timeout=1.0):
+                print(f"[VitalWatch] Connected to MySQL database server.")
+            else:
+                sqlite_path = Path(__file__).resolve().parent.parent / "vitalwatch.db"
+                print(f"[VitalWatch] Notice: MySQL server is not currently reachable at {db_uri}.")
+                print(f"[VitalWatch] Using local fallback SQLite database ({sqlite_path}) for zero-downtime execution.")
+                print(f"[VitalWatch] To use MySQL, start your MySQL service and run 'CREATE DATABASE vitalwatch;'.")
+                app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{sqlite_path}"
 
     db.init_app(app)
 

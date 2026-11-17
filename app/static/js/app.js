@@ -248,8 +248,24 @@ function initAuthView() {
 }
 
 // ----------------------------------------------------
-// Navigation & Tabs
+// Navigation & Tabs (Desktop & Mobile Unified Navigation)
 // ----------------------------------------------------
+function openSidebar() {
+  const sidebar = document.querySelector(".sidebar");
+  const backdrop = document.getElementById("sidebar-backdrop");
+  if (sidebar) sidebar.classList.add("open");
+  if (backdrop) backdrop.classList.add("active");
+  document.body.classList.add("drawer-open");
+}
+
+function closeSidebar() {
+  const sidebar = document.querySelector(".sidebar");
+  const backdrop = document.getElementById("sidebar-backdrop");
+  if (sidebar) sidebar.classList.remove("open");
+  if (backdrop) backdrop.classList.remove("active");
+  document.body.classList.remove("drawer-open");
+}
+
 function initNavigation() {
   const navLinks = document.querySelectorAll(".nav-link[data-tab]");
   navLinks.forEach(link => {
@@ -258,11 +274,53 @@ function initNavigation() {
       const tab = link.dataset.tab;
       window.location.hash = tab;
       switchTab(tab);
-
-      // Close mobile sidebar if open
-      const sidebar = document.querySelector(".sidebar");
-      if (sidebar) sidebar.classList.remove("open");
+      closeSidebar();
     });
+  });
+
+  // Mobile Bottom Navigation Bar buttons
+  const bottomNavItems = document.querySelectorAll(".bottom-nav-item[data-tab]");
+  bottomNavItems.forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const tab = btn.dataset.tab;
+      window.location.hash = tab;
+      switchTab(tab);
+      closeSidebar();
+    });
+  });
+
+  // Mobile Bottom Navigation "More" button
+  const bottomMoreBtn = document.getElementById("bottom-nav-more");
+  if (bottomMoreBtn) {
+    bottomMoreBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const sidebar = document.querySelector(".sidebar");
+      if (sidebar && sidebar.classList.contains("open")) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
+    });
+  }
+
+  // Mobile Drawer Backdrop click to close
+  const backdrop = document.getElementById("sidebar-backdrop");
+  if (backdrop) {
+    backdrop.addEventListener("click", closeSidebar);
+  }
+
+  // Mobile Drawer X close button
+  const sidebarCloseBtn = document.getElementById("sidebar-close-btn");
+  if (sidebarCloseBtn) {
+    sidebarCloseBtn.addEventListener("click", closeSidebar);
+  }
+
+  // Close drawer on Escape key press
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeSidebar();
+    }
   });
 
   // Hash change listener for browser navigation
@@ -278,12 +336,17 @@ function initNavigation() {
     }
   });
 
-  // Mobile menu toggle
+  // Mobile menu toggle button in slim topbar
   const mobileToggle = document.getElementById("mobile-menu-toggle");
   if (mobileToggle) {
-    mobileToggle.addEventListener("click", () => {
+    mobileToggle.addEventListener("click", (e) => {
+      e.preventDefault();
       const sidebar = document.querySelector(".sidebar");
-      if (sidebar) sidebar.classList.toggle("open");
+      if (sidebar && sidebar.classList.contains("open")) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
     });
   }
 
@@ -310,6 +373,18 @@ function switchTab(tabName) {
       link.classList.remove("active");
     }
   });
+
+  // Update bottom navigation bar active states
+  document.querySelectorAll(".bottom-nav-item[data-tab]").forEach(item => {
+    if (item.dataset.tab === tabName) {
+      item.classList.add("active");
+    } else {
+      item.classList.remove("active");
+    }
+  });
+
+  // Close mobile drawer if open
+  closeSidebar();
 
   // Hide all views, display chosen view with smooth animation
   const views = ["overview", "dashboard", "vitals", "history", "alerts", "water", "water-sources", "actions", "community", "community-health", "risk-score", "risk-map", "trends", "awareness", "cases", "reports"];
@@ -853,14 +928,17 @@ function renderDashboard(data) {
 
 function updateAlertBadgeCounters(count) {
   const sidebarBadge = document.getElementById("sidebar-alerts-badge");
-  if (sidebarBadge) {
-    if (count > 0) {
-      sidebarBadge.textContent = count;
-      sidebarBadge.style.display = "inline-block";
-    } else {
-      sidebarBadge.style.display = "none";
+  const bottomBadge = document.getElementById("bottom-alerts-badge");
+  [sidebarBadge, bottomBadge].forEach(badge => {
+    if (badge) {
+      if (count > 0) {
+        badge.textContent = count > 99 ? "99+" : count;
+        badge.style.display = "inline-flex";
+      } else {
+        badge.style.display = "none";
+      }
     }
-  }
+  });
 }
 
 function renderTrendsChart(readings) {
